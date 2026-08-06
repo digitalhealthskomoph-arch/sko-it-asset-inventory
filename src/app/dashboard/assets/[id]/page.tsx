@@ -289,10 +289,12 @@ export default function EditAssetPage({ params }: { params: Promise<{ id: string
                   <span className="text-sm font-medium">แตะเพื่อเปิดกล้องหรือเปลี่ยนรูป</span>
                 </button>
               ) : (
-                <div className="relative rounded-xl overflow-hidden border border-slate-200 bg-slate-100 h-48">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={currentImageDisplay} alt="Preview" className="w-full h-full object-cover" />
-                  <button type="button" onClick={removeImage} className="absolute top-2 right-2 p-1.5 bg-white/90 text-slate-600 rounded-lg shadow-sm hover:text-red-600 transition-colors">
+                <div className="relative rounded-xl overflow-hidden border border-slate-200 bg-slate-100 h-48 group">
+                  <a href={currentImageDisplay} target="_blank" rel="noopener noreferrer" className="block w-full h-full cursor-pointer">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={currentImageDisplay} alt="Preview" className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
+                  </a>
+                  <button type="button" onClick={removeImage} className="absolute top-2 right-2 p-1.5 bg-white/90 text-slate-600 rounded-lg shadow-sm hover:text-red-600 transition-colors z-10">
                     <X className="w-5 h-5" />
                   </button>
                 </div>
