@@ -212,14 +212,14 @@ export default function EditAssetPage({ params }: { params: Promise<{ id: string
             <h3 className="font-medium text-slate-800 border-b pb-2">1. สถานที่และผู้ใช้งาน</h3>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">กลุ่มงาน / ฝ่าย <span className="text-red-500">*</span></label>
-              <select required value={selectedDept} onChange={(e) => { setSelectedDept(e.target.value); setSelectedPerson(''); }} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
+              <select required value={selectedDept} onChange={(e) => { setSelectedDept(e.target.value); setSelectedPerson(''); }} className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 disabled:bg-slate-100 disabled:text-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
                 <option value="">-- เลือกกลุ่มงาน --</option>
                 {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
               </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">ผู้ครอบครอง / ใช้งานหลัก (ถ้ามี)</label>
-              <select value={selectedPerson} onChange={(e) => setSelectedPerson(e.target.value)} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" disabled={!selectedDept}>
+              <select value={selectedPerson} onChange={(e) => setSelectedPerson(e.target.value)} className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 disabled:bg-slate-100 disabled:text-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" disabled={!selectedDept}>
                 <option value="">-- ไม่ระบุ / ส่วนกลาง --</option>
                 {filteredPersonnel.map(p => <option key={p.id} value={p.id}>{p.first_name} {p.last_name}</option>)}
               </select>
@@ -230,15 +230,15 @@ export default function EditAssetPage({ params }: { params: Promise<{ id: string
             <h3 className="font-medium text-slate-800 border-b pb-2">2. ข้อมูลครุภัณฑ์</h3>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">รหัสครุภัณฑ์ (ถ้ามี)</label>
-              <input type="text" value={assetNumber} onChange={(e) => setAssetNumber(e.target.value)} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" />
+              <input type="text" value={assetNumber} onChange={(e) => setAssetNumber(e.target.value)} className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 disabled:bg-slate-100 disabled:text-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">ชื่ออุปกรณ์ <span className="text-red-500">*</span></label>
-              <input type="text" required value={assetName} onChange={(e) => setAssetName(e.target.value)} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" />
+              <input type="text" required value={assetName} onChange={(e) => setAssetName(e.target.value)} className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 disabled:bg-slate-100 disabled:text-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">ประเภท <span className="text-red-500">*</span></label>
-              <select required value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
+              <select required value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 disabled:bg-slate-100 disabled:text-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
                 <option value="">-- เลือกประเภท --</option>
                 {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
@@ -246,11 +246,11 @@ export default function EditAssetPage({ params }: { params: Promise<{ id: string
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">MAC Address (ถ้ามี)</label>
-                <input type="text" value={macAddress} onChange={handleMacChange} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-mono text-sm uppercase placeholder:normal-case" placeholder="เช่น A1:B2:C3:D4:E5:F6" maxLength={17} />
+                <input type="text" value={macAddress} onChange={handleMacChange} className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 disabled:bg-slate-100 disabled:text-slate-500 focus:ring-2 focus:ring-blue-500 outline-none transition-all font-mono text-sm uppercase placeholder:normal-case" placeholder="เช่น A1:B2:C3:D4:E5:F6" maxLength={17} />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">IP Address (ถ้ามี)</label>
-                <input type="text" value={ipAddress} onChange={(e) => setIpAddress(e.target.value)} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-mono text-sm" placeholder="เช่น 192.168.1.100" />
+                <input type="text" value={ipAddress} onChange={(e) => setIpAddress(e.target.value)} className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 disabled:bg-slate-100 disabled:text-slate-500 focus:ring-2 focus:ring-blue-500 outline-none transition-all font-mono text-sm" placeholder="เช่น 192.168.1.100" />
               </div>
             </div>
           </div>
@@ -259,7 +259,7 @@ export default function EditAssetPage({ params }: { params: Promise<{ id: string
             <h3 className="font-medium text-slate-800 border-b pb-2">3. สถานะและรูปภาพ</h3>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">สถานะปัจจุบัน</label>
-              <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
+              <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 disabled:bg-slate-100 disabled:text-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
                 <option value="ใช้งาน">ใช้งานได้ปกติ</option>
                 <option value="ชำรุด">ชำรุด / รอซ่อม</option>
                 <option value="เสื่อมสภาพ">เสื่อมสภาพ / รอจำหน่าย</option>
@@ -286,7 +286,7 @@ export default function EditAssetPage({ params }: { params: Promise<{ id: string
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">หมายเหตุเพิ่มเติม</label>
-              <textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none" placeholder="ระบุอาการชำรุด หรือข้อมูลเพิ่มเติม..." />
+              <textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 disabled:bg-slate-100 disabled:text-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none" placeholder="ระบุอาการชำรุด หรือข้อมูลเพิ่มเติม..." />
             </div>
           </div>
 

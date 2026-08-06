@@ -183,7 +183,7 @@ export default function SurveyPage() {
                   setSelectedDept(e.target.value);
                   setSelectedPerson(''); // reset person when dept changes
                 }}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 disabled:bg-slate-100 disabled:text-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
               >
                 <option value="">-- เลือกกลุ่มงาน --</option>
                 {departments.map(d => (
@@ -197,7 +197,7 @@ export default function SurveyPage() {
               <select 
                 value={selectedPerson}
                 onChange={(e) => setSelectedPerson(e.target.value)}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 disabled:bg-slate-100 disabled:text-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
                 disabled={!selectedDept}
               >
                 <option value="">-- ไม่ระบุ / ส่วนกลาง --</option>
@@ -219,7 +219,7 @@ export default function SurveyPage() {
                   type="text" 
                   value={assetNumber}
                   onChange={(e) => setAssetNumber(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                  className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 disabled:bg-slate-100 disabled:text-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
                   placeholder="เช่น 7440-001-0001"
                 />
               </div>
@@ -232,7 +232,7 @@ export default function SurveyPage() {
                 required
                 value={assetName}
                 onChange={(e) => setAssetName(e.target.value)}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 disabled:bg-slate-100 disabled:text-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
                 placeholder="เช่น เครื่องคอมพิวเตอร์พกพา, จอภาพ"
               />
             </div>
@@ -243,7 +243,7 @@ export default function SurveyPage() {
                 required
                 value={categoryId}
                 onChange={(e) => setCategoryId(e.target.value)}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 disabled:bg-slate-100 disabled:text-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
               >
                 <option value="">-- เลือกประเภท --</option>
                 {categories.map(c => (
@@ -259,7 +259,7 @@ export default function SurveyPage() {
                   type="text" 
                   value={macAddress}
                   onChange={handleMacChange}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-mono text-sm uppercase placeholder:normal-case"
+                  className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 disabled:bg-slate-100 disabled:text-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-mono text-sm uppercase placeholder:normal-case"
                   placeholder="เช่น A1:B2:C3:D4:E5:F6"
                   maxLength={17}
                 />
@@ -271,7 +271,7 @@ export default function SurveyPage() {
                   type="text" 
                   value={ipAddress}
                   onChange={(e) => setIpAddress(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-mono text-sm"
+                  className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 disabled:bg-slate-100 disabled:text-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-mono text-sm"
                   placeholder="เช่น 192.168.1.100"
                 />
               </div>
@@ -287,7 +287,7 @@ export default function SurveyPage() {
               <select 
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 disabled:bg-slate-100 disabled:text-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
               >
                 <option value="ใช้งาน">ใช้งานได้ปกติ</option>
                 <option value="ชำรุด">ชำรุด / รอซ่อม</option>
@@ -338,7 +338,7 @@ export default function SurveyPage() {
                 rows={3}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none"
+                className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 disabled:bg-slate-100 disabled:text-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none"
                 placeholder="ระบุอาการชำรุด หรือข้อมูลเพิ่มเติม..."
               />
             </div>
