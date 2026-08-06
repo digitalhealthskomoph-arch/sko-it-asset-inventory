@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     const base64Image = Buffer.from(buffer).toString('base64');
     
     // Choose the vision model
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
     
     // Define the prompt
     const prompt = `
