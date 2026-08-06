@@ -65,6 +65,7 @@ CREATE TABLE IF NOT EXISTS public.assets (
     -- Network & Cyber Security Act Requirements
     ip_address TEXT,
     mac_address TEXT,
+    mac_address_wifi TEXT,
     is_network_approved BOOLEAN DEFAULT false,
     connected_components TEXT, -- (devices, applications, OS, networks connected)
     
