@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Camera, Save, Search, Loader2 } from 'lucide-react';
+import { Camera, Save, Search, Loader2, Image as ImageIcon, X } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 export default function SurveyPage() {
+  const router = useRouter();
   const [departments, setDepartments] = useState<any[]>([]);
   const [personnel, setPersonnel] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
@@ -20,6 +22,11 @@ export default function SurveyPage() {
   const [categoryId, setCategoryId] = useState('');
   const [status, setStatus] = useState('ใช้งาน');
   const [notes, setNotes] = useState('');
+  
+  // Image State
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchFormData();
@@ -43,19 +50,95 @@ export default function SurveyPage() {
     }
   };
 
+  // -------------------------
+  // Image Handling
+  // -------------------------
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check size (max 5MB just in case)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('ไฟล์รูปภาพใหญ่เกินไป (จำกัดไม่เกิน 5MB)');
+      return;
+    }
+
+    setImageFile(file);
+    const objectUrl = URL.createObjectURL(file);
+    setImagePreview(objectUrl);
+  };
+
+  const removeImage = () => {
+    setImageFile(null);
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  // -------------------------
+  // Save Data
+  // -------------------------
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     
-    // Simulate save for now
-    setTimeout(() => {
+    try {
+      let photoUrl = null;
+
+      // 1. Upload Image to Supabase Storage (if exists)
+      if (imageFile) {
+        const fileExt = imageFile.name.split('.').pop();
+        const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
+        const filePath = `survey/${fileName}`; // Put in 'survey' folder
+
+        const { error: uploadError } = await supabase.storage
+          .from('asset-images')
+          .upload(filePath, imageFile, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (uploadError) {
+          console.error('Upload Error:', uploadError);
+          throw new Error('ไม่สามารถอัปโหลดรูปภาพได้');
+        }
+
+        // Get public URL
+        const { data: publicUrlData } = supabase.storage
+          .from('asset-images')
+          .getPublicUrl(filePath);
+          
+        photoUrl = publicUrlData.publicUrl;
+      }
+
+      // 2. Insert Record into 'assets' table
+      const { error: insertError } = await supabase.from('assets').insert([
+        {
+          asset_number: assetNumber || null,
+          asset_name: assetName,
+          category_id: categoryId,
+          department_id: selectedDept || null,
+          personnel_id: selectedPerson || null,
+          status: status,
+          notes: notes,
+          photo_url: photoUrl,
+          last_check_date: new Date().toISOString(),
+        }
+      ]);
+
+      if (insertError) throw insertError;
+
       alert('บันทึกข้อมูลการสำรวจเรียบร้อยแล้ว');
+      
+      // Navigate to Assets List
+      router.push('/dashboard/assets');
+      
+    } catch (error: any) {
+      console.error('Save Error:', error);
+      alert(`เกิดข้อผิดพลาด: ${error.message}`);
+    } finally {
       setSaving(false);
-      // Reset some fields
-      setAssetNumber('');
-      setAssetName('');
-      setNotes('');
-    }, 1000);
+    }
   };
 
   const filteredPersonnel = selectedDept 
@@ -68,11 +151,9 @@ export default function SurveyPage() {
 
   return (
     <div className="max-w-2xl mx-auto pb-20">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">สำรวจครุภัณฑ์</h1>
-          <p className="text-slate-500 text-sm mt-1">บันทึกข้อมูลและสถานะครุภัณฑ์หน้างาน</p>
-        </div>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-slate-800">สำรวจครุภัณฑ์</h1>
+        <p className="text-slate-500 text-sm mt-1">บันทึกข้อมูลและสถานะครุภัณฑ์หน้างานเข้าสู่ระบบ พ.ร.บ.ไซเบอร์</p>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
@@ -83,11 +164,14 @@ export default function SurveyPage() {
             <h3 className="font-medium text-slate-800 border-b pb-2">1. สถานที่และผู้ใช้งาน</h3>
             
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">กลุ่มงาน / ฝ่าย</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">กลุ่มงาน / ฝ่าย <span className="text-red-500">*</span></label>
               <select 
                 required
                 value={selectedDept}
-                onChange={(e) => setSelectedDept(e.target.value)}
+                onChange={(e) => {
+                  setSelectedDept(e.target.value);
+                  setSelectedPerson(''); // reset person when dept changes
+                }}
                 className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
               >
                 <option value="">-- เลือกกลุ่มงาน --</option>
@@ -118,23 +202,20 @@ export default function SurveyPage() {
             <h3 className="font-medium text-slate-800 border-b pb-2">2. ข้อมูลครุภัณฑ์</h3>
             
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">หมายเลขครุภัณฑ์ / หมายเลข GF</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">รหัสครุภัณฑ์ (ถ้ามี)</label>
               <div className="relative">
                 <input 
                   type="text" 
                   value={assetNumber}
                   onChange={(e) => setAssetNumber(e.target.value)}
-                  className="w-full pl-4 pr-12 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
                   placeholder="เช่น 7440-001-0001"
                 />
-                <button type="button" className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-blue-600 rounded-lg">
-                  <Search className="w-5 h-5" />
-                </button>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">ชื่อทรัพย์สิน / อุปกรณ์</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">ชื่ออุปกรณ์ <span className="text-red-500">*</span></label>
               <input 
                 type="text" 
                 required
@@ -146,7 +227,7 @@ export default function SurveyPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">ประเภท</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">ประเภท <span className="text-red-500">*</span></label>
               <select 
                 required
                 value={categoryId}
@@ -180,11 +261,39 @@ export default function SurveyPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">รูปภาพ</label>
-              <button type="button" className="w-full flex flex-col items-center justify-center p-6 border-2 border-dashed border-slate-300 rounded-xl bg-slate-50 text-slate-500 hover:text-blue-600 hover:border-blue-300 transition-colors">
-                <Camera className="w-8 h-8 mb-2" />
-                <span className="text-sm font-medium">แตะเพื่อถ่ายภาพหรืออัปโหลดรูป</span>
-              </button>
+              <label className="block text-sm font-medium text-slate-700 mb-1">รูปภาพหน้างาน</label>
+              
+              <input 
+                type="file" 
+                accept="image/*" 
+                capture="environment" 
+                className="hidden" 
+                ref={fileInputRef}
+                onChange={handleImageChange}
+              />
+
+              {!imagePreview ? (
+                <button 
+                  type="button" 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full flex flex-col items-center justify-center p-6 border-2 border-dashed border-slate-300 rounded-xl bg-slate-50 text-slate-500 hover:text-blue-600 hover:border-blue-300 transition-colors"
+                >
+                  <Camera className="w-8 h-8 mb-2" />
+                  <span className="text-sm font-medium">แตะเพื่อเปิดกล้องถ่ายภาพ</span>
+                </button>
+              ) : (
+                <div className="relative rounded-xl overflow-hidden border border-slate-200 bg-slate-100 h-48">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                  <button 
+                    type="button" 
+                    onClick={removeImage}
+                    className="absolute top-2 right-2 p-1.5 bg-white/90 text-slate-600 rounded-lg shadow-sm hover:text-red-600 transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              )}
             </div>
 
             <div>
@@ -207,9 +316,9 @@ export default function SurveyPage() {
               className="w-full flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-xl transition-colors disabled:opacity-70"
             >
               {saving ? (
-                <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> กำลังบันทึก...</>
+                <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> กำลังบันทึกอัปโหลด...</>
               ) : (
-                <><Save className="w-5 h-5 mr-2" /> บันทึกการสำรวจ</>
+                <><Save className="w-5 h-5 mr-2" /> บันทึกและอัปโหลด</>
               )}
             </button>
           </div>
