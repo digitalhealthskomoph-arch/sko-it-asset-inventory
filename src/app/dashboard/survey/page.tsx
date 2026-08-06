@@ -21,6 +21,7 @@ export default function SurveyPage() {
   const [assetName, setAssetName] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [macAddress, setMacAddress] = useState('');
+  const [macAddressWifi, setMacAddressWifi] = useState('');
   const [ipAddress, setIpAddress] = useState('');
   const [status, setStatus] = useState('ใช้งาน');
   const [notes, setNotes] = useState('');
@@ -30,6 +31,13 @@ export default function SurveyPage() {
     if (val.length > 12) val = val.slice(0, 12);
     const match = val.match(/.{1,2}/g);
     setMacAddress(match ? match.join(':') : '');
+  };
+
+  const handleMacWifiChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let val = e.target.value.replace(/[^A-Fa-f0-9]/g, '').toUpperCase();
+    if (val.length > 12) val = val.slice(0, 12);
+    const match = val.match(/.{1,2}/g);
+    setMacAddressWifi(match ? match.join(':') : '');
   };
   
   // Image State
@@ -130,6 +138,7 @@ export default function SurveyPage() {
           personnel_id: selectedPerson || null,
           ip_address: ipAddress || null,
           mac_address: macAddress || null,
+          mac_address_wifi: macAddressWifi || null,
           status: status,
           notes: notes,
           photo_url: photoUrl,
@@ -254,7 +263,7 @@ export default function SurveyPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">MAC Address (ถ้ามี)</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">MAC Address (LAN)</label>
                 <input 
                   type="text" 
                   value={macAddress}
@@ -263,18 +272,29 @@ export default function SurveyPage() {
                   placeholder="เช่น A1:B2:C3:D4:E5:F6"
                   maxLength={17}
                 />
-                <p className="text-xs text-slate-500 mt-1">ใช้อ้างอิงการเชื่อมต่อ OCS Inventory</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">IP Address (ถ้ามี)</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">MAC Address (Wi-Fi)</label>
                 <input 
                   type="text" 
-                  value={ipAddress}
-                  onChange={(e) => setIpAddress(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 disabled:bg-slate-100 disabled:text-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-mono text-sm"
-                  placeholder="เช่น 192.168.1.100"
+                  value={macAddressWifi}
+                  onChange={handleMacWifiChange}
+                  className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 disabled:bg-slate-100 disabled:text-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-mono text-sm uppercase placeholder:normal-case"
+                  placeholder="เช่น A1:B2:C3:D4:E5:F6"
+                  maxLength={17}
                 />
               </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">IP Address (ถ้ามี)</label>
+              <input 
+                type="text" 
+                value={ipAddress}
+                onChange={(e) => setIpAddress(e.target.value)}
+                className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 disabled:bg-slate-100 disabled:text-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-mono text-sm"
+                placeholder="เช่น 192.168.1.100"
+              />
             </div>
           </div>
 
