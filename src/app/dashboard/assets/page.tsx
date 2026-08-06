@@ -1,0 +1,145 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
+import { Search, Loader2, Plus, MonitorSmartphone } from 'lucide-react';
+import Link from 'next/link';
+
+export default function AssetListPage() {
+  const [assets, setAssets] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    fetchAssets();
+  }, []);
+
+  const fetchAssets = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('assets')
+        .select(`
+          *,
+          departments (name),
+          personnel (first_name, last_name),
+          asset_categories (name)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setAssets(data || []);
+    } catch (error) {
+      console.error('Error fetching assets:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredAssets = assets.filter(asset => 
+    asset.asset_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    asset.asset_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    asset.brand_model?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    asset.personnel?.first_name?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  return (
+    <div className="space-y-6 pb-10">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">รายการครุภัณฑ์ทั้งหมด</h1>
+          <p className="text-slate-500 text-sm mt-1">ทะเบียนคุมทรัพย์สิน พ.ร.บ.ไซเบอร์ และ งานไอที</p>
+        </div>
+        <Link 
+          href="/dashboard/survey"
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors flex items-center shadow-sm"
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          เพิ่มรายการใหม่ / สำรวจ
+        </Link>
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col h-[calc(100vh-200px)] min-h-[500px]">
+        {/* Toolbar */}
+        <div className="p-4 border-b border-slate-100 flex items-center justify-between gap-4 bg-slate-50/50">
+          <div className="relative flex-1 max-w-md">
+            <input 
+              type="text" 
+              placeholder="ค้นหาชื่อ, รหัส, ยี่ห้อ, หรือชื่อผู้ใช้งาน..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+            />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          </div>
+          <div className="text-sm text-slate-500">
+            พบ {filteredAssets.length} รายการ
+          </div>
+        </div>
+
+        {/* Table / List */}
+        <div className="flex-1 overflow-auto">
+          {loading ? (
+            <div className="h-full flex items-center justify-center">
+              <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+            </div>
+          ) : filteredAssets.length === 0 ? (
+            <div className="h-full flex flex-col items-center justify-center text-slate-400 space-y-4">
+              <MonitorSmartphone className="w-16 h-16 text-slate-200" />
+              <p>ยังไม่มีข้อมูลครุภัณฑ์</p>
+            </div>
+          ) : (
+            <table className="w-full text-left border-collapse min-w-[800px]">
+              <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm">
+                <tr>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">รหัสครุภัณฑ์</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">ชื่ออุปกรณ์</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">ผู้ครอบครอง</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">กลุ่มงาน</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">สถานะ</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 bg-white">
+                {filteredAssets.map((asset) => (
+                  <tr key={asset.id} className="hover:bg-slate-50 transition-colors group cursor-pointer">
+                    <td className="px-6 py-4">
+                      <div className="font-medium text-slate-800">{asset.asset_number || '-'}</div>
+                      <div className="text-xs text-slate-500 mt-1">GF: {asset.gf_number || '-'}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="font-medium text-slate-800">{asset.asset_name || asset.asset_categories?.name || '-'}</div>
+                      <div className="text-xs text-slate-500 mt-1">{asset.brand_model || '-'}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      {asset.personnel ? (
+                        <div className="flex items-center">
+                          <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold mr-2">
+                            {asset.personnel.first_name[0]}
+                          </div>
+                          <span className="text-sm text-slate-700">{asset.personnel.first_name} {asset.personnel.last_name}</span>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-slate-400">ส่วนกลาง</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-600">
+                      {asset.departments?.name || '-'}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${
+                        asset.status === 'ใช้งาน' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                        asset.status === 'ชำรุด' ? 'bg-rose-50 text-rose-700 border-rose-200' :
+                        'bg-amber-50 text-amber-700 border-amber-200'
+                      }`}>
+                        {asset.status || 'ใช้งาน'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
