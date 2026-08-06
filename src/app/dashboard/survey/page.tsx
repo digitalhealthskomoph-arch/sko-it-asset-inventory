@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Camera, Save, Search, Loader2, Image as ImageIcon, X } from 'lucide-react';
+import { Search, Loader2, Plus, MonitorSmartphone, Camera, Save, X, Sparkles } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 export default function SurveyPage() {
@@ -20,6 +21,8 @@ export default function SurveyPage() {
   const [assetNumber, setAssetNumber] = useState('');
   const [assetName, setAssetName] = useState('');
   const [categoryId, setCategoryId] = useState('');
+  const [brandModel, setBrandModel] = useState('');
+  const [serialNumber, setSerialNumber] = useState('');
   const [macAddress, setMacAddress] = useState('');
   const [macAddressWifi, setMacAddressWifi] = useState('');
   const [ipAddress, setIpAddress] = useState('');
@@ -38,6 +41,55 @@ export default function SurveyPage() {
     if (val.length > 12) val = val.slice(0, 12);
     const match = val.match(/.{1,2}/g);
     setMacAddressWifi(match ? match.join(':') : '');
+  };
+  
+  // AI Scanning State
+  const [isScanning, setIsScanning] = useState(false);
+  const scanInputRef = useRef<HTMLInputElement>(null);
+
+  const handleScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('ไฟล์รูปภาพใหญ่เกินไป (จำกัดไม่เกิน 5MB)');
+      if (scanInputRef.current) scanInputRef.current.value = '';
+      return;
+    }
+
+    setIsScanning(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const response = await fetch('/api/analyze-image', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('ไม่สามารถวิเคราะห์รูปภาพได้ กรุณาตรวจสอบ API Key หรือลองใหม่อีกครั้ง');
+      }
+
+      const data = await response.json();
+      
+      // Update states if AI found something and the current field is empty
+      if (data.macAddressLan && !macAddress) setMacAddress(data.macAddressLan);
+      if (data.macAddressWifi && !macAddressWifi) setMacAddressWifi(data.macAddressWifi);
+      if (data.ipAddress && !ipAddress) setIpAddress(data.ipAddress);
+      if (data.hostName && !assetName) setAssetName(data.hostName);
+      if (data.assetNumber && !assetNumber) setAssetNumber(data.assetNumber);
+      if (data.serialNumber && !serialNumber) setSerialNumber(data.serialNumber);
+      if (data.brandModel && !brandModel) setBrandModel(data.brandModel);
+      
+      alert('ดึงข้อมูลจากรูปภาพสำเร็จ โปรดตรวจสอบความถูกต้องก่อนบันทึก');
+    } catch (error: any) {
+      console.error('Scan error:', error);
+      alert(error.message);
+    } finally {
+      setIsScanning(false);
+      if (scanInputRef.current) scanInputRef.current.value = '';
+    }
   };
   
   // Image State
@@ -133,6 +185,8 @@ export default function SurveyPage() {
         {
           asset_number: assetNumber || null,
           asset_name: assetName,
+          brand_model: brandModel || null,
+          serial_number: serialNumber || null,
           category_id: categoryId,
           department_id: selectedDept || null,
           personnel_id: selectedPerson || null,
@@ -171,9 +225,34 @@ export default function SurveyPage() {
 
   return (
     <div className="max-w-2xl mx-auto pb-20">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-800">สำรวจครุภัณฑ์</h1>
-        <p className="text-slate-500 text-sm mt-1">บันทึกข้อมูลและสถานะครุภัณฑ์หน้างานเข้าสู่ระบบ พ.ร.บ.ไซเบอร์</p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">สำรวจครุภัณฑ์</h1>
+          <p className="text-slate-500 text-sm mt-1">บันทึกข้อมูลและสถานะครุภัณฑ์หน้างานเข้าสู่ระบบ พ.ร.บ.ไซเบอร์</p>
+        </div>
+      </div>
+
+      {/* AI Scanner Banner */}
+      <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-center gap-4 justify-between shadow-sm">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center shrink-0">
+            <Sparkles className="w-6 h-6" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-blue-900">ใช้ AI ช่วยกรอกข้อมูลอัตโนมัติ</h3>
+            <p className="text-sm text-blue-700/80 mt-0.5">ถ่ายรูปหน้าจอ ipconfig หรือสติกเกอร์ครุภัณฑ์ เพื่อดึง MAC/IP, ชื่อเครื่อง และรหัสให้อัตโนมัติ</p>
+          </div>
+        </div>
+        <input type="file" accept="image/*" capture="environment" className="hidden" ref={scanInputRef} onChange={handleScan} />
+        <button 
+          type="button" 
+          onClick={() => scanInputRef.current?.click()}
+          disabled={isScanning}
+          className="w-full sm:w-auto shrink-0 bg-white border border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300 font-medium py-2.5 px-5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm disabled:opacity-60"
+        >
+          {isScanning ? <Loader2 className="w-5 h-5 animate-spin" /> : <Camera className="w-5 h-5" />}
+          {isScanning ? 'กำลังสแกน...' : 'ถ่ายรูปสแกน'}
+        </button>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
@@ -259,6 +338,28 @@ export default function SurveyPage() {
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </select>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">ยี่ห้อ / รุ่น (ถ้ามี)</label>
+                <input 
+                  type="text" 
+                  value={brandModel}
+                  onChange={(e) => setBrandModel(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                  placeholder="เช่น HP ProDesk, Dell Latitude"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Serial Number (S/N)</label>
+                <input 
+                  type="text" 
+                  value={serialNumber}
+                  onChange={(e) => setSerialNumber(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
