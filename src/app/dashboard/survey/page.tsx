@@ -68,7 +68,9 @@ export default function SurveyPage() {
       });
 
       if (!response.ok) {
-        throw new Error('ไม่สามารถวิเคราะห์รูปภาพได้ กรุณาตรวจสอบ API Key หรือลองใหม่อีกครั้ง');
+        const errData = await response.json().catch(() => null);
+        const errorMessage = errData?.error || 'ไม่สามารถวิเคราะห์รูปภาพได้ กรุณาตรวจสอบ API Key หรือลองใหม่อีกครั้ง';
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
