@@ -4,8 +4,10 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Search, Loader2, Plus, MonitorSmartphone } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function AssetListPage() {
+  const router = useRouter();
   const [assets, setAssets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -100,7 +102,11 @@ export default function AssetListPage() {
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
                 {filteredAssets.map((asset) => (
-                  <tr key={asset.id} className="hover:bg-slate-50 transition-colors group cursor-pointer">
+                  <tr 
+                    key={asset.id} 
+                    onClick={() => router.push(`/dashboard/assets/${asset.id}`)}
+                    className="hover:bg-slate-50 transition-colors group cursor-pointer"
+                  >
                     <td className="px-6 py-4">
                       <div className="font-medium text-slate-800">{asset.asset_number || '-'}</div>
                       <div className="text-xs text-slate-500 mt-1">GF: {asset.gf_number || '-'}</div>
