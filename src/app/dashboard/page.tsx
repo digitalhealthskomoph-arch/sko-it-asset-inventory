@@ -24,7 +24,7 @@ export default function DashboardPage() {
       const [assetsRes, deptRes, catRes] = await Promise.all([
         supabase.from('assets').select(`
           id, status, last_check_date, department_id, category_id,
-          departments(name)
+          departments(name), asset_categories(name)
         `),
         supabase.from('departments').select('id, name').order('name'),
         supabase.from('asset_categories').select('id, name').order('name')
@@ -73,6 +73,19 @@ export default function DashboardPage() {
       .map(name => ({ name, count: deptCounts[name] }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 10); // Top 10
+  }, [filteredAssets]);
+
+  // Chart Data: Assets by Category
+  const catChartData = useMemo(() => {
+    const catCounts: Record<string, number> = {};
+    filteredAssets.forEach(asset => {
+      const catName = asset.asset_categories?.name || 'ไม่ระบุ';
+      catCounts[catName] = (catCounts[catName] || 0) + 1;
+    });
+    return Object.keys(catCounts)
+      .map(name => ({ name, count: catCounts[name] }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 15); // Top 15
   }, [filteredAssets]);
 
   // Chart Data: Status Pie Chart
@@ -204,6 +217,38 @@ export default function DashboardPage() {
               </ResponsiveContainer>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Category Bar Chart (Full Width) */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+        <h2 className="text-lg font-semibold text-slate-800 mb-6">จำนวนครุภัณฑ์แยกตามประเภท (Top 15)</h2>
+        <div className="h-80">
+          {loading ? (
+            <div className="h-full flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
+          ) : catChartData.length === 0 ? (
+            <div className="h-full flex items-center justify-center text-slate-400">ไม่มีข้อมูลตามเงื่อนไขที่เลือก</div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={catChartData} margin={{ top: 5, right: 30, left: 20, bottom: 25 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                <XAxis 
+                  dataKey="name" 
+                  tick={{ fontSize: 12, fill: '#64748b' }} 
+                  axisLine={false} 
+                  tickLine={false} 
+                  angle={-45}
+                  textAnchor="end"
+                />
+                <YAxis tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                <Tooltip 
+                  cursor={{ fill: '#f8fafc' }}
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                />
+                <Bar dataKey="count" fill="#8b5cf6" radius={[4, 4, 0, 0]} name="จำนวน (รายการ)" />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
     </div>
