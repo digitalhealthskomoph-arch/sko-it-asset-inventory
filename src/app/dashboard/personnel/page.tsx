@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Loader2, Plus, Users, Search } from 'lucide-react';
+import { Loader2, Plus, Users, Search, Edit2, Trash2 } from 'lucide-react';
 
 export default function PersonnelPage() {
   const [personnel, setPersonnel] = useState<any[]>([]);
@@ -13,8 +13,9 @@ export default function PersonnelPage() {
   // Add modal state
   const [showAddModal, setShowAddModal] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editingPersonId, setEditingPersonId] = useState<string | null>(null);
   
-  // New person form state
+  // Form state
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [position, setPosition] = useState('');
@@ -40,37 +41,83 @@ export default function PersonnelPage() {
     }
   };
 
-  const handleAddPerson = async (e: React.FormEvent) => {
+  const handleSavePerson = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     
     try {
-      const { data, error } = await supabase.from('personnel').insert([
-        {
+      if (editingPersonId) {
+        // Edit Mode
+        const { data, error } = await supabase.from('personnel').update({
           first_name: firstName,
           last_name: lastName,
           position: position,
           department_id: deptId || null
-        }
-      ]).select('*, departments(name)');
+        }).eq('id', editingPersonId).select('*, departments(name)');
 
-      if (error) throw error;
-      
-      if (data) {
-        setPersonnel([...personnel, data[0]].sort((a, b) => a.first_name.localeCompare(b.first_name)));
-        setShowAddModal(false);
-        // Reset form
-        setFirstName('');
-        setLastName('');
-        setPosition('');
-        setDeptId('');
+        if (error) throw error;
+        
+        if (data) {
+          setPersonnel(personnel.map(p => p.id === editingPersonId ? data[0] : p).sort((a, b) => a.first_name.localeCompare(b.first_name)));
+          closeModal();
+        }
+      } else {
+        // Add Mode
+        const { data, error } = await supabase.from('personnel').insert([
+          {
+            first_name: firstName,
+            last_name: lastName,
+            position: position,
+            department_id: deptId || null
+          }
+        ]).select('*, departments(name)');
+
+        if (error) throw error;
+        
+        if (data) {
+          setPersonnel([...personnel, data[0]].sort((a, b) => a.first_name.localeCompare(b.first_name)));
+          closeModal();
+        }
       }
     } catch (error) {
-      console.error('Error adding person:', error);
-      alert('เกิดข้อผิดพลาดในการเพิ่มข้อมูล');
+      console.error('Error saving person:', error);
+      alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleDelete = async (id: string, name: string) => {
+    if (!window.confirm(`คุณแน่ใจหรือไม่ที่จะลบข้อมูลของ "${name}"?\n(หากบุคคลนี้มีชื่อผูกกับครุภัณฑ์อยู่ อาจทำให้เกิดข้อผิดพลาดในการลบ)`)) {
+      return;
+    }
+    
+    try {
+      const { error } = await supabase.from('personnel').delete().eq('id', id);
+      if (error) throw error;
+      setPersonnel(personnel.filter(p => p.id !== id));
+    } catch (error) {
+      console.error('Error deleting person:', error);
+      alert('เกิดข้อผิดพลาดในการลบข้อมูล หรืออาจมีข้อมูลครุภัณฑ์ที่ผูกกับบุคคลนี้อยู่');
+    }
+  };
+
+  const closeModal = () => {
+    setShowAddModal(false);
+    setEditingPersonId(null);
+    setFirstName('');
+    setLastName('');
+    setPosition('');
+    setDeptId('');
+  };
+
+  const openEditModal = (person: any) => {
+    setEditingPersonId(person.id);
+    setFirstName(person.first_name);
+    setLastName(person.last_name);
+    setPosition(person.position || '');
+    setDeptId(person.department_id || '');
+    setShowAddModal(true);
   };
 
   const filteredPersonnel = personnel.filter(p => 
@@ -87,7 +134,10 @@ export default function PersonnelPage() {
           <p className="text-slate-500 text-sm mt-1">รายชื่อผู้ใช้งานและกลุ่มงานในระบบ</p>
         </div>
         <button 
-          onClick={() => setShowAddModal(true)}
+          onClick={() => {
+            closeModal(); // Ensure form is reset before opening
+            setShowAddModal(true);
+          }}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors flex items-center shadow-sm"
         >
           <Plus className="w-4 h-4 mr-2" />
@@ -131,11 +181,12 @@ export default function PersonnelPage() {
                   <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">ชื่อ - นามสกุล</th>
                   <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">ตำแหน่ง</th>
                   <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">กลุ่มงาน</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">จัดการ</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
                 {filteredPersonnel.map((person) => (
-                  <tr key={person.id} className="hover:bg-slate-50 transition-colors">
+                  <tr key={person.id} className="hover:bg-slate-50 transition-colors group">
                     <td className="px-6 py-4">
                       <div className="font-medium text-slate-800">{person.first_name} {person.last_name}</div>
                     </td>
@@ -145,6 +196,24 @@ export default function PersonnelPage() {
                     <td className="px-6 py-4 text-sm text-slate-600">
                       {person.departments?.name || '-'}
                     </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => openEditModal(person)}
+                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          title="แก้ไขข้อมูล"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(person.id, `${person.first_name} ${person.last_name}`)}
+                          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="ลบข้อมูล"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -153,18 +222,20 @@ export default function PersonnelPage() {
         </div>
       </div>
 
-      {/* Add Modal */}
+      {/* Add / Edit Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
-              <h2 className="text-lg font-bold text-slate-800">เพิ่มบุคลากรใหม่</h2>
-              <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-600">
+              <h2 className="text-lg font-bold text-slate-800">
+                {editingPersonId ? 'แก้ไขข้อมูลบุคลากร' : 'เพิ่มบุคลากรใหม่'}
+              </h2>
+              <button onClick={closeModal} className="text-slate-400 hover:text-slate-600">
                 &times;
               </button>
             </div>
             
-            <form onSubmit={handleAddPerson} className="p-6 space-y-4">
+            <form onSubmit={handleSavePerson} className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">ชื่อ <span className="text-red-500">*</span></label>
@@ -192,7 +263,7 @@ export default function PersonnelPage() {
               </div>
 
               <div className="pt-4 flex gap-3">
-                <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 px-4 py-2 border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 font-medium">
+                <button type="button" onClick={closeModal} className="flex-1 px-4 py-2 border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 font-medium">
                   ยกเลิก
                 </button>
                 <button type="submit" disabled={saving} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex justify-center items-center">
