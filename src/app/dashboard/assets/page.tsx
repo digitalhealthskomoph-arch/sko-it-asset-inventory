@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Search, Loader2, Plus, MonitorSmartphone } from 'lucide-react';
+import { Search, Loader2, Plus, MonitorSmartphone, Filter } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -11,10 +11,28 @@ export default function AssetListPage() {
   const [assets, setAssets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [departments, setDepartments] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [selectedDept, setSelectedDept] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
 
   useEffect(() => {
+    fetchFilters();
     fetchAssets();
   }, []);
+
+  const fetchFilters = async () => {
+    try {
+      const [deptRes, catRes] = await Promise.all([
+        supabase.from('departments').select('id, name').order('name'),
+        supabase.from('asset_categories').select('id, name').order('name')
+      ]);
+      if (deptRes.data) setDepartments(deptRes.data);
+      if (catRes.data) setCategories(catRes.data);
+    } catch (error) {
+      console.error('Error fetching filters:', error);
+    }
+  };
 
   const fetchAssets = async () => {
     try {
@@ -37,12 +55,17 @@ export default function AssetListPage() {
     }
   };
 
-  const filteredAssets = assets.filter(asset => 
-    asset.asset_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    asset.asset_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    asset.brand_model?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    asset.personnel?.first_name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredAssets = assets.filter(asset => {
+    const matchesSearch = asset.asset_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      asset.asset_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      asset.brand_model?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      asset.personnel?.first_name?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesDept = selectedDept ? asset.department_id === selectedDept : true;
+    const matchesCat = selectedCategory ? asset.category_id === selectedCategory : true;
+
+    return matchesSearch && matchesDept && matchesCat;
+  });
 
   return (
     <div className="space-y-6 pb-10">
@@ -62,18 +85,41 @@ export default function AssetListPage() {
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col h-[calc(100vh-200px)] min-h-[500px]">
         {/* Toolbar */}
-        <div className="p-4 border-b border-slate-100 flex items-center justify-between gap-4 bg-slate-50/50">
-          <div className="relative flex-1 max-w-md">
-            <input 
-              type="text" 
-              placeholder="ค้นหาชื่อ, รหัส, ยี่ห้อ, หรือชื่อผู้ใช้งาน..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-            />
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+        <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row items-center justify-between gap-4 bg-slate-50/50">
+          <div className="flex flex-col sm:flex-row w-full md:w-auto gap-3">
+            <div className="relative flex-1 sm:w-80">
+              <input 
+                type="text" 
+                placeholder="ค้นหาชื่อ, รหัส, ยี่ห้อ, หรือผู้ใช้งาน..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+              />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            </div>
+            
+            <div className="flex gap-2">
+              <select 
+                value={selectedDept}
+                onChange={(e) => setSelectedDept(e.target.value)}
+                className="bg-white border border-slate-200 rounded-xl text-sm px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+              >
+                <option value="">ทุกกลุ่มงาน</option>
+                {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+              </select>
+
+              <select 
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="bg-white border border-slate-200 rounded-xl text-sm px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+              >
+                <option value="">ทุกประเภท</option>
+                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
           </div>
-          <div className="text-sm text-slate-500">
+
+          <div className="text-sm text-slate-500 font-medium whitespace-nowrap self-end md:self-auto">
             พบ {filteredAssets.length} รายการ
           </div>
         </div>
