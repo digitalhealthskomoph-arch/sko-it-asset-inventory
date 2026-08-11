@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Search, Loader2, Plus, MonitorSmartphone, Filter } from 'lucide-react';
+import { Search, Loader2, Plus, MonitorSmartphone, Filter, Image as ImageIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -139,6 +139,7 @@ export default function AssetListPage() {
             <table className="w-full text-left border-collapse min-w-[800px]">
               <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm">
                 <tr>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-16">รูปภาพ</th>
                   <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">รหัสครุภัณฑ์</th>
                   <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">ชื่ออุปกรณ์</th>
                   <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">ผู้ครอบครอง</th>
@@ -153,6 +154,24 @@ export default function AssetListPage() {
                     onClick={() => router.push(`/dashboard/assets/${asset.id}`)}
                     className="hover:bg-slate-50 transition-colors group cursor-pointer"
                   >
+                    <td className="px-6 py-4">
+                      {asset.photo_url ? (
+                        <div className="relative group/img">
+                          <div className="w-10 h-10 rounded-lg overflow-hidden border border-slate-200 bg-white">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={asset.photo_url} alt="Asset" className="w-full h-full object-cover" />
+                          </div>
+                          <div className="absolute left-12 top-1/2 -translate-y-1/2 hidden group-hover/img:block z-[60] shadow-2xl border border-slate-200 rounded-xl overflow-hidden bg-white">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={asset.photo_url} alt="Asset Preview" className="w-64 h-64 object-cover" />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="w-10 h-10 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center">
+                          <ImageIcon className="w-4 h-4 text-slate-400" />
+                        </div>
+                      )}
+                    </td>
                     <td className="px-6 py-4">
                       <div className="font-medium text-slate-800">{asset.asset_number || '-'}</div>
                       <div className="text-xs text-slate-500 mt-1">GF: {asset.gf_number || '-'}</div>
