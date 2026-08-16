@@ -15,6 +15,7 @@ export default function AssetListPage() {
   const [categories, setCategories] = useState<any[]>([]);
   const [selectedDept, setSelectedDept] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('');
 
   useEffect(() => {
     fetchFilters();
@@ -63,8 +64,9 @@ export default function AssetListPage() {
     
     const matchesDept = selectedDept ? asset.department_id === selectedDept : true;
     const matchesCat = selectedCategory ? asset.category_id === selectedCategory : true;
+    const matchesStatus = selectedStatus ? asset.status === selectedStatus : true;
 
-    return matchesSearch && matchesDept && matchesCat;
+    return matchesSearch && matchesDept && matchesCat && matchesStatus;
   });
 
   return (
@@ -115,6 +117,18 @@ export default function AssetListPage() {
               >
                 <option value="">ทุกประเภท</option>
                 {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+
+              <select 
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+                className="bg-white border border-slate-200 rounded-xl text-sm px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+              >
+                <option value="">ทุกสถานะ</option>
+                <option value="ใช้งาน">ใช้งาน</option>
+                <option value="ชำรุด">ชำรุด</option>
+                <option value="เสื่อมสภาพ">เสื่อมสภาพ</option>
+                <option value="ไม่พบ">ไม่พบ</option>
               </select>
             </div>
           </div>

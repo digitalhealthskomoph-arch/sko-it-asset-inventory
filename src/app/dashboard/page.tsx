@@ -71,8 +71,7 @@ export default function DashboardPage() {
     });
     return Object.keys(deptCounts)
       .map(name => ({ name, count: deptCounts[name] }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 10); // Top 10
+      .sort((a, b) => b.count - a.count);
   }, [filteredAssets]);
 
   // Chart Data: Assets by Category
@@ -155,25 +154,25 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Bar Chart */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 lg:col-span-2">
-          <h2 className="text-lg font-semibold text-slate-800 mb-6">จำนวนครุภัณฑ์แยกตามกลุ่มงาน (Top 10)</h2>
-          <div className="h-80">
+          <h2 className="text-lg font-semibold text-slate-800 mb-6">จำนวนครุภัณฑ์แยกตามกลุ่มงาน</h2>
+          <div className="h-80 overflow-y-auto">
             {loading ? (
               <div className="h-full flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
             ) : deptChartData.length === 0 ? (
               <div className="h-full flex items-center justify-center text-slate-400">ไม่มีข้อมูลตามเงื่อนไขที่เลือก</div>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={deptChartData} margin={{ top: 5, right: 30, left: 20, bottom: 25 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                  <XAxis 
+              <ResponsiveContainer width="100%" height={Math.max(300, deptChartData.length * 40)}>
+                <BarChart data={deptChartData} layout="vertical" margin={{ top: 5, right: 30, left: 10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
+                  <XAxis type="number" tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                  <YAxis 
                     dataKey="name" 
+                    type="category" 
                     tick={{ fontSize: 12, fill: '#64748b' }} 
                     axisLine={false} 
                     tickLine={false} 
-                    angle={-45}
-                    textAnchor="end"
+                    width={150} 
                   />
-                  <YAxis tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
                   <Tooltip 
                     cursor={{ fill: '#f8fafc' }}
                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
