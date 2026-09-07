@@ -103,7 +103,42 @@ export default function RepairFormPage() {
 
     let imageUrl = null;
     
-    // TODO: Upload file to R2 if selected (Skipped for now as requested)
+    // Upload file to R2 if selected
+    if (file) {
+      try {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `repair_${generatedTicket}_${Date.now()}.${fileExt}`;
+        
+        // 1. Get presigned URL from API
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            filename: fileName,
+            contentType: file.type,
+          }),
+        });
+        
+        if (res.ok) {
+          const { presignedUrl, publicUrl } = await res.json();
+          
+          // 2. Upload directly to R2
+          const uploadRes = await fetch(presignedUrl, {
+            method: 'PUT',
+            body: file,
+            headers: { 'Content-Type': file.type },
+          });
+          
+          if (uploadRes.ok) {
+            imageUrl = publicUrl;
+          } else {
+            console.error('Failed to upload image to R2');
+          }
+        }
+      } catch (err) {
+        console.error('Error uploading image:', err);
+      }
+    }
 
     const { error } = await supabase.from('repair_tickets').insert({
       ticket_number: generatedTicket,

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Loader2, Search, Edit, AlertCircle, Clock, CheckCircle, ListTodo } from 'lucide-react';
+import { Loader2, Search, Edit, AlertCircle, Clock, CheckCircle, ListTodo, Image as ImageIcon } from 'lucide-react';
 import Link from 'next/link';
 
 type Ticket = {
@@ -11,6 +11,7 @@ type Ticket = {
   issue_type: string;
   description: string;
   status: string;
+  image_url: string | null;
   created_at: string;
   personnel: { first_name: string; last_name: string } | null;
   departments: { name: string } | null;
@@ -33,7 +34,7 @@ export default function TicketsPage() {
     const { data, error } = await supabase
       .from('repair_tickets')
       .select(`
-        id, ticket_number, issue_type, description, status, created_at,
+        id, ticket_number, issue_type, description, status, image_url, created_at,
         personnel (first_name, last_name),
         departments (name),
         assets (asset_number, brand_model)
@@ -180,6 +181,12 @@ export default function TicketsPage() {
                         {ticket.issue_type}
                       </div>
                       <div className="text-slate-700 line-clamp-2">{ticket.description}</div>
+                      {ticket.image_url && (
+                        <a href={ticket.image_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-xs text-blue-600 hover:underline mt-2">
+                          <ImageIcon className="w-3 h-3 mr-1" />
+                          ดูรูปภาพ
+                        </a>
+                      )}
                     </td>
                     <td className="p-4 text-center">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
