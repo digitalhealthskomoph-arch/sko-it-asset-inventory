@@ -8,14 +8,17 @@ import Link from 'next/link';
 type Department = { id: string; name: string };
 type Personnel = { id: string; first_name: string; last_name: string };
 type Asset = { id: string; asset_number: string; brand_model: string; category_id: string };
+type Category = { id: string; name: string };
 
 export default function RepairFormPage() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [personnel, setPersonnel] = useState<Personnel[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
 
   const [selectedDept, setSelectedDept] = useState('');
   const [selectedPersonnel, setSelectedPersonnel] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedAsset, setSelectedAsset] = useState('');
   
   const [issueType, setIssueType] = useState('Hardware');
@@ -27,15 +30,19 @@ export default function RepairFormPage() {
   const [success, setSuccess] = useState(false);
   const [ticketNumber, setTicketNumber] = useState('');
 
-  // 1. Fetch Departments on load
+  // 1. Fetch Departments and Categories on load
   useEffect(() => {
-    const fetchDepartments = async () => {
+    const fetchInitialData = async () => {
       setLoading(true);
-      const { data } = await supabase.from('departments').select('id, name').order('name');
-      if (data) setDepartments(data);
+      const [deptRes, catRes] = await Promise.all([
+        supabase.from('departments').select('id, name').order('name'),
+        supabase.from('asset_categories').select('id, name').order('name')
+      ]);
+      if (deptRes.data) setDepartments(deptRes.data);
+      if (catRes.data) setCategories(catRes.data);
       setLoading(false);
     };
-    fetchDepartments();
+    fetchInitialData();
   }, []);
 
   // 2. Fetch Personnel when Department changes
@@ -60,6 +67,7 @@ export default function RepairFormPage() {
   useEffect(() => {
     if (!selectedPersonnel) {
       setAssets([]);
+      setSelectedCategory('');
       setSelectedAsset('');
       return;
     }
@@ -69,9 +77,17 @@ export default function RepairFormPage() {
         .select('id, asset_number, brand_model, category_id')
         .eq('personnel_id', selectedPersonnel);
       if (data) setAssets(data);
+      // Auto-reset category and asset when personnel changes
+      setSelectedCategory('');
+      setSelectedAsset('');
     };
     fetchAssets();
   }, [selectedPersonnel]);
+
+  // Filter assets based on selected category
+  const filteredAssets = selectedCategory 
+    ? assets.filter(a => a.category_id === selectedCategory)
+    : assets;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -182,6 +198,27 @@ export default function RepairFormPage() {
         </div>
 
         <div className="space-y-1.5">
+          <label className="text-sm font-medium text-slate-700">ประเภทอุปกรณ์</label>
+          <select 
+            disabled={!selectedPersonnel || assets.length === 0}
+            value={selectedCategory} 
+            onChange={e => {
+              setSelectedCategory(e.target.value);
+              setSelectedAsset(''); // reset asset when category changes
+            }}
+            className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+          >
+            <option value="">-- อุปกรณ์ทั้งหมด --</option>
+            {categories
+              .filter(c => assets.some(a => a.category_id === c.id)) // Only show categories that the personnel actually has assets for
+              .map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))
+            }
+          </select>
+        </div>
+
+        <div className="space-y-1.5">
           <label className="text-sm font-medium text-slate-700">อุปกรณ์ที่มีปัญหา (ถ้ามี)</label>
           <select 
             disabled={!selectedPersonnel}
@@ -190,7 +227,7 @@ export default function RepairFormPage() {
             className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
           >
             <option value="">-- ไม่ระบุอุปกรณ์ / อื่นๆ --</option>
-            {assets.map(a => (
+            {filteredAssets.map(a => (
               <option key={a.id} value={a.id}>{a.asset_number} ({a.brand_model})</option>
             ))}
           </select>

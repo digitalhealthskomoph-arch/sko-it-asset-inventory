@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Loader2, Search, Edit } from 'lucide-react';
+import { Loader2, Search, Edit, AlertCircle, Clock, CheckCircle, ListTodo } from 'lucide-react';
 import Link from 'next/link';
 
 type Ticket = {
@@ -84,6 +84,53 @@ export default function TicketsPage() {
           <Search className="w-5 h-5 text-slate-400 absolute left-3 top-2.5" />
         </div>
       </div>
+
+      {!loading && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex items-center gap-4">
+            <div className="bg-slate-100 p-3 rounded-lg text-slate-600">
+              <ListTodo className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="text-sm text-slate-500 font-medium">งานทั้งหมด</div>
+              <div className="text-2xl font-bold text-slate-800">{tickets.length}</div>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex items-center gap-4">
+            <div className="bg-orange-100 p-3 rounded-lg text-orange-600">
+              <AlertCircle className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="text-sm text-slate-500 font-medium">รอรับเรื่อง</div>
+              <div className="text-2xl font-bold text-slate-800">
+                {tickets.filter(t => t.status === 'รอรับเรื่อง').length}
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex items-center gap-4">
+            <div className="bg-blue-100 p-3 rounded-lg text-blue-600">
+              <Clock className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="text-sm text-slate-500 font-medium">กำลังดำเนินการ</div>
+              <div className="text-2xl font-bold text-slate-800">
+                {tickets.filter(t => t.status === 'กำลังดำเนินการ').length}
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex items-center gap-4">
+            <div className="bg-green-100 p-3 rounded-lg text-green-600">
+              <CheckCircle className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="text-sm text-slate-500 font-medium">เสร็จสิ้น</div>
+              <div className="text-2xl font-bold text-slate-800">
+                {tickets.filter(t => t.status === 'เสร็จสิ้น').length}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div className="flex justify-center items-center h-64">
