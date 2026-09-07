@@ -243,9 +243,30 @@ export default function RepairFormPage() {
             <option value="Hardware">Hardware (เครื่องคอม, ปริ้นเตอร์)</option>
             <option value="Software">Software (โปรแกรม, ไวรัส)</option>
             <option value="Network">Network (อินเทอร์เน็ต, LAN, WiFi)</option>
+            <option value="Plan-D">Plan-D</option>
+            <option value="ช่วยดึงข้อมูล">ช่วยดึงข้อมูล</option>
             <option value="Other">อื่นๆ</option>
           </select>
         </div>
+
+        {issueType === 'ช่วยดึงข้อมูล' && (
+          <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 flex gap-3">
+            <svg className="w-6 h-6 text-blue-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <div className="text-sm text-blue-800">
+              <p className="font-medium mb-1">ต้องการตัวช่วยดึงข้อมูล?</p>
+              <p className="mb-2">สามารถใช้ Notebook LM เพื่อสอบถามข้อมูลที่ต้องการ แล้วนำมาบันทึกในรายละเอียดด้านล่าง</p>
+              <a 
+                href="https://notebook.google.com/notebook/4de96053-3bdc-4cd0-ac9d-bcec163e6bc7" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="inline-flex items-center text-blue-700 font-medium hover:underline bg-white px-3 py-1.5 rounded-lg border border-blue-200 shadow-sm"
+              >
+                เปิด Notebook LM
+                <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+              </a>
+            </div>
+          </div>
+        )}
 
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-slate-700">รายละเอียดปัญหา</label>
