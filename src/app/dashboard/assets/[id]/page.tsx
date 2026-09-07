@@ -175,23 +175,34 @@ export default function EditAssetPage({ params }: { params: Promise<{ id: string
     try {
       let photoUrl = existingPhotoUrl;
 
-      // Upload New Image
+      // Upload New Image to Cloudflare R2
       if (imageFile) {
         const fileExt = imageFile.name.split('.').pop();
         const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
         const filePath = `survey/${fileName}`; 
 
-        const { error: uploadError } = await supabase.storage
-          .from('asset-images')
-          .upload(filePath, imageFile, { cacheControl: '3600', upsert: false });
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            filename: filePath,
+            contentType: imageFile.type,
+          }),
+        });
 
-        if (uploadError) throw new Error('ไม่สามารถอัปโหลดรูปภาพได้');
+        if (!res.ok) throw new Error('ไม่สามารถเตรียมการอัปโหลดรูปภาพได้');
 
-        const { data: publicUrlData } = supabase.storage
-          .from('asset-images')
-          .getPublicUrl(filePath);
+        const { presignedUrl, publicUrl } = await res.json();
+
+        const uploadRes = await fetch(presignedUrl, {
+          method: 'PUT',
+          headers: { 'Content-Type': imageFile.type },
+          body: imageFile,
+        });
+
+        if (!uploadRes.ok) throw new Error('ไม่สามารถอัปโหลดรูปภาพได้');
           
-        photoUrl = publicUrlData.publicUrl;
+        photoUrl = publicUrl;
       }
 
       // Update Record

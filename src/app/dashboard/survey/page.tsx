@@ -156,30 +156,40 @@ export default function SurveyPage() {
     try {
       let photoUrl = null;
 
-      // 1. Upload Image to Supabase Storage (if exists)
+      // 1. Upload Image to Cloudflare R2
       if (imageFile) {
         const fileExt = imageFile.name.split('.').pop();
         const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
         const filePath = `survey/${fileName}`; // Put in 'survey' folder
 
-        const { error: uploadError } = await supabase.storage
-          .from('asset-images')
-          .upload(filePath, imageFile, {
-            cacheControl: '3600',
-            upsert: false
-          });
+        // ขอ Presigned URL จาก API ของเรา
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            filename: filePath,
+            contentType: imageFile.type,
+          }),
+        });
 
-        if (uploadError) {
-          console.error('Upload Error:', uploadError);
+        if (!res.ok) {
+          throw new Error('ไม่สามารถเตรียมการอัปโหลดรูปภาพได้');
+        }
+
+        const { presignedUrl, publicUrl } = await res.json();
+
+        // อัปโหลดไฟล์ไปที่ R2 โดยตรงผ่าน Presigned URL
+        const uploadRes = await fetch(presignedUrl, {
+          method: 'PUT',
+          headers: { 'Content-Type': imageFile.type },
+          body: imageFile,
+        });
+
+        if (!uploadRes.ok) {
           throw new Error('ไม่สามารถอัปโหลดรูปภาพได้');
         }
 
-        // Get public URL
-        const { data: publicUrlData } = supabase.storage
-          .from('asset-images')
-          .getPublicUrl(filePath);
-          
-        photoUrl = publicUrlData.publicUrl;
+        photoUrl = publicUrl;
       }
 
       // 2. Insert Record into 'assets' table
