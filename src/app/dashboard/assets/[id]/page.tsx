@@ -38,6 +38,8 @@ export default function EditAssetPage({ params }: { params: Promise<{ id: string
   const [existingPhotoUrl, setExistingPhotoUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [repairHistory, setRepairHistory] = useState<any[]>([]);
+
   useEffect(() => {
     fetchData();
   }, [id]);
@@ -45,16 +47,18 @@ export default function EditAssetPage({ params }: { params: Promise<{ id: string
   const fetchData = async () => {
     try {
       // Fetch metadata
-      const [deptRes, personRes, catRes, assetRes] = await Promise.all([
+      const [deptRes, personRes, catRes, assetRes, ticketsRes] = await Promise.all([
         supabase.from('departments').select('*').order('name'),
         supabase.from('personnel').select('*').order('first_name'),
         supabase.from('asset_categories').select('*').order('name'),
         supabase.from('assets').select('*').eq('id', id).single(),
+        supabase.from('repair_tickets').select('*').eq('asset_id', id).order('created_at', { ascending: false })
       ]);
 
       if (deptRes.data) setDepartments(deptRes.data);
       if (personRes.data) setPersonnel(personRes.data);
       if (catRes.data) setCategories(catRes.data);
+      if (ticketsRes.data) setRepairHistory(ticketsRes.data);
 
       if (assetRes.data) {
         const asset = assetRes.data;
@@ -405,6 +409,46 @@ export default function EditAssetPage({ params }: { params: Promise<{ id: string
               <label className="block text-sm font-medium text-slate-700 mb-1">หมายเหตุเพิ่มเติม</label>
               <textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 disabled:bg-slate-100 disabled:text-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none" placeholder="ระบุอาการชำรุด หรือข้อมูลเพิ่มเติม..." />
             </div>
+          </div>
+
+          <div className="space-y-4">
+            <h3 className="font-medium text-slate-800 border-b pb-2">4. ประวัติการซ่อม (Repair History)</h3>
+            {repairHistory.length > 0 ? (
+              <div className="border border-slate-200 rounded-xl overflow-hidden">
+                <div className="divide-y divide-slate-100">
+                  {repairHistory.map((ticket) => (
+                    <div key={ticket.id} className="p-4 bg-white flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-bold text-slate-800">{ticket.ticket_number}</span>
+                          <span className={`px-2 py-0.5 rounded text-xs font-medium border ${
+                            ticket.status === 'เสร็จสิ้น' ? 'bg-green-50 text-green-700 border-green-200' :
+                            ticket.status === 'กำลังดำเนินการ' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                            'bg-orange-50 text-orange-700 border-orange-200'
+                          }`}>
+                            {ticket.status}
+                          </span>
+                        </div>
+                        <div className="text-sm text-slate-700 font-medium">{ticket.issue_type}</div>
+                        <div className="text-sm text-slate-500 line-clamp-2 mt-1">{ticket.description}</div>
+                        {ticket.resolution_notes && (
+                          <div className="text-sm text-green-700 mt-2 bg-green-50 p-2 rounded border border-green-100">
+                            <strong>การแก้ไข:</strong> {ticket.resolution_notes}
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-xs text-slate-400 whitespace-nowrap text-left sm:text-right">
+                        <div>แจ้งเมื่อ: {new Date(ticket.created_at).toLocaleDateString('th-TH')}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-center text-sm text-slate-500">
+                ยังไม่มีประวัติการซ่อมสำหรับอุปกรณ์นี้
+              </div>
+            )}
           </div>
 
           <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-200 lg:static lg:bg-transparent lg:border-none lg:p-0 z-10 shadow-[0_-4px_6px_-1px_rgb(0,0,0,0.05)] lg:shadow-none flex gap-3">
