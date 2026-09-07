@@ -82,7 +82,7 @@ export default function RepairFormPage() {
     // In production, might want a safer sequence generation in DB.
     const year = new Date().getFullYear() + 543; // Thai year
     const random = Math.floor(Math.random() * 9000) + 1000;
-    const generatedTicket = \`IT-\${year.toString().slice(2)}\${random}\`;
+    const generatedTicket = `IT-${year.toString().slice(2)}${random}`;
 
     let imageUrl = null;
     
