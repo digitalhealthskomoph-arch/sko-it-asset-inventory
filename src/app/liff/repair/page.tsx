@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Loader2, Wrench, Upload } from 'lucide-react';
+import Link from 'next/link';
 
 type Department = { id: string; name: string };
 type Personnel = { id: string; first_name: string; last_name: string };
@@ -133,6 +134,9 @@ export default function RepairFormPage() {
     <div className="max-w-md mx-auto bg-white min-h-screen shadow-sm">
       <div className="bg-blue-600 text-white p-6 rounded-b-3xl shadow-md">
         <div className="flex items-center gap-3">
+          <Link href="/liff" className="p-2 hover:bg-white/20 rounded-lg transition-colors -ml-2">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+          </Link>
           <div className="bg-white/20 p-2 rounded-lg">
             <Wrench className="w-6 h-6" />
           </div>
