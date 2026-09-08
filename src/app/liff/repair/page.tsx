@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Loader2, Wrench, Upload } from 'lucide-react';
 import Link from 'next/link';
+import liff from '@line/liff';
 
 type Department = { id: string; name: string };
 type Personnel = { id: string; first_name: string; last_name: string };
@@ -11,6 +12,9 @@ type Asset = { id: string; asset_number: string; brand_model: string; category_i
 type Category = { id: string; name: string };
 
 export default function RepairFormPage() {
+  const [lineUserId, setLineUserId] = useState<string | null>(null);
+  const [liffError, setLiffError] = useState<string | null>(null);
+
   const [departments, setDepartments] = useState<Department[]>([]);
   const [personnel, setPersonnel] = useState<Personnel[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -29,6 +33,25 @@ export default function RepairFormPage() {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [ticketNumber, setTicketNumber] = useState('');
+
+  // Initialize LIFF
+  useEffect(() => {
+    const initLiff = async () => {
+      try {
+        await liff.init({ liffId: process.env.NEXT_PUBLIC_LIFF_ID || '' });
+        if (liff.isLoggedIn()) {
+          const profile = await liff.getProfile();
+          setLineUserId(profile.userId);
+        } else {
+          // If not logged in and not in LINE app, prompt login or let it be null
+          // liff.login();
+        }
+      } catch (err: any) {
+        setLiffError(err.toString());
+      }
+    };
+    initLiff();
+  }, []);
 
   // 1. Fetch Departments and Categories on load
   useEffect(() => {
@@ -148,6 +171,7 @@ export default function RepairFormPage() {
       issue_type: issueType,
       description: description,
       image_url: imageUrl,
+      line_user_id: lineUserId,
       status: 'รอรับเรื่อง'
     });
 

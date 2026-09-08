@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Loader2, Search, Edit, AlertCircle, Clock, CheckCircle, ListTodo, Image as ImageIcon } from 'lucide-react';
+import { Loader2, Search, Edit, AlertCircle, Clock, CheckCircle, ListTodo, Image as ImageIcon, X } from 'lucide-react';
 import Link from 'next/link';
 
 type Ticket = {
@@ -13,10 +13,18 @@ type Ticket = {
   status: string;
   image_url: string | null;
   created_at: string;
+  technician_name: string | null;
+  resolution_notes: string | null;
   personnel: { first_name: string; last_name: string } | null;
   departments: { name: string } | null;
   assets: { asset_number: string; brand_model: string } | null;
 };
+
+const TECHNICIANS = [
+  'ณัฏฐ์ดนัย ตั้งธนพรสกุล',
+  'จิระเดช ช่างสาย',
+  'ธนกฤต นิธิตันติปัญญา'
+];
 
 export default function TicketsPage() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -24,6 +32,12 @@ export default function TicketsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+
+  // Modal State
+  const [showModal, setShowModal] = useState(false);
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
+  const [technicianName, setTechnicianName] = useState(TECHNICIANS[0]);
+  const [resolutionNotes, setResolutionNotes] = useState('');
 
   useEffect(() => {
     fetchTickets();
@@ -34,7 +48,7 @@ export default function TicketsPage() {
     const { data, error } = await supabase
       .from('repair_tickets')
       .select(`
-        id, ticket_number, issue_type, description, status, image_url, created_at,
+        id, ticket_number, issue_type, description, status, image_url, created_at, technician_name, resolution_notes,
         personnel (first_name, last_name),
         departments (name),
         assets (asset_number, brand_model)
@@ -48,6 +62,15 @@ export default function TicketsPage() {
   };
 
   const handleUpdateStatus = async (id: string, newStatus: string) => {
+    if (newStatus === 'รอผู้ใช้ยืนยัน') {
+      const ticket = tickets.find(t => t.id === id);
+      setTechnicianName(ticket?.technician_name || TECHNICIANS[0]);
+      setResolutionNotes(ticket?.resolution_notes || '');
+      setSelectedTicketId(id);
+      setShowModal(true);
+      return;
+    }
+
     setUpdatingId(id);
     const { error } = await supabase
       .from('repair_tickets')
@@ -60,10 +83,41 @@ export default function TicketsPage() {
     setUpdatingId(null);
   };
 
+  const handleConfirmCompletion = async () => {
+    if (!selectedTicketId || !resolutionNotes.trim()) {
+      alert('กรุณากรอกวิธีการแก้ไข');
+      return;
+    }
+
+    setUpdatingId(selectedTicketId);
+    setShowModal(false);
+
+    const { error } = await supabase
+      .from('repair_tickets')
+      .update({ 
+        status: 'รอผู้ใช้ยืนยัน',
+        technician_name: technicianName,
+        resolution_notes: resolutionNotes
+      })
+      .eq('id', selectedTicketId);
+      
+    if (!error) {
+      setTickets(tickets.map(t => t.id === selectedTicketId ? { 
+        ...t, 
+        status: 'รอผู้ใช้ยืนยัน',
+        technician_name: technicianName,
+        resolution_notes: resolutionNotes
+      } : t));
+    } else {
+      alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+    }
+    setUpdatingId(null);
+  };
+
   const filteredTickets = tickets.filter(t => 
     t.ticket_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
     t.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    t.personnel?.first_name.toLowerCase().includes(searchTerm.toLowerCase())
+    (t.personnel?.first_name || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -102,9 +156,9 @@ export default function TicketsPage() {
               <AlertCircle className="w-6 h-6" />
             </div>
             <div>
-              <div className="text-sm text-slate-500 font-medium">รอรับเรื่อง</div>
+              <div className="text-sm text-slate-500 font-medium">กำลังรอดำเนินการ</div>
               <div className="text-2xl font-bold text-slate-800">
-                {tickets.filter(t => t.status === 'รอรับเรื่อง').length}
+                {tickets.filter(t => ['รอรับเรื่อง', 'กำลังดำเนินการ'].includes(t.status)).length}
               </div>
             </div>
           </div>
@@ -113,9 +167,9 @@ export default function TicketsPage() {
               <Clock className="w-6 h-6" />
             </div>
             <div>
-              <div className="text-sm text-slate-500 font-medium">กำลังดำเนินการ</div>
+              <div className="text-sm text-slate-500 font-medium">รอผู้ใช้ยืนยัน</div>
               <div className="text-2xl font-bold text-slate-800">
-                {tickets.filter(t => t.status === 'กำลังดำเนินการ').length}
+                {tickets.filter(t => t.status === 'รอผู้ใช้ยืนยัน').length}
               </div>
             </div>
           </div>
@@ -124,9 +178,9 @@ export default function TicketsPage() {
               <CheckCircle className="w-6 h-6" />
             </div>
             <div>
-              <div className="text-sm text-slate-500 font-medium">เสร็จสิ้น</div>
+              <div className="text-sm text-slate-500 font-medium">ปิดงานแล้ว</div>
               <div className="text-2xl font-bold text-slate-800">
-                {tickets.filter(t => t.status === 'เสร็จสิ้น').length}
+                {tickets.filter(t => t.status === 'ปิดงาน').length}
               </div>
             </div>
           </div>
@@ -146,7 +200,7 @@ export default function TicketsPage() {
                   <th className="p-4">เลขที่/วันที่</th>
                   <th className="p-4">ผู้แจ้ง/กลุ่มงาน</th>
                   <th className="p-4">อุปกรณ์ (ถ้ามี)</th>
-                  <th className="p-4">อาการเสีย</th>
+                  <th className="p-4">อาการเสีย/การแก้ไข</th>
                   <th className="p-4 text-center">สถานะ</th>
                   <th className="p-4 text-center">จัดการ</th>
                 </tr>
@@ -180,18 +234,24 @@ export default function TicketsPage() {
                       <div className="inline-block px-2 py-1 bg-slate-100 text-slate-600 rounded text-xs mb-1 font-medium">
                         {ticket.issue_type}
                       </div>
-                      <div className="text-slate-700 line-clamp-2">{ticket.description}</div>
+                      <div className="text-slate-700 line-clamp-2 mb-1">{ticket.description}</div>
                       {ticket.image_url && (
-                        <a href={ticket.image_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-xs text-blue-600 hover:underline mt-2">
+                        <a href={ticket.image_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-xs text-blue-600 hover:underline mt-1">
                           <ImageIcon className="w-3 h-3 mr-1" />
                           ดูรูปภาพ
                         </a>
                       )}
+                      {ticket.resolution_notes && (
+                        <div className="mt-2 bg-green-50 p-2 rounded border border-green-100 text-xs text-green-700">
+                          <strong>{ticket.technician_name} แก้ไข:</strong> {ticket.resolution_notes}
+                        </div>
+                      )}
                     </td>
                     <td className="p-4 text-center">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
-                        ticket.status === 'เสร็จสิ้น' ? 'bg-green-50 text-green-700 border-green-200' :
-                        ticket.status === 'กำลังดำเนินการ' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                        ticket.status === 'ปิดงาน' ? 'bg-green-50 text-green-700 border-green-200' :
+                        ticket.status === 'รอผู้ใช้ยืนยัน' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                        ticket.status === 'กำลังดำเนินการ' ? 'bg-purple-50 text-purple-700 border-purple-200' :
                         'bg-orange-50 text-orange-700 border-orange-200'
                       }`}>
                         {ticket.status}
@@ -200,6 +260,8 @@ export default function TicketsPage() {
                     <td className="p-4 text-center">
                       {updatingId === ticket.id ? (
                         <Loader2 className="w-5 h-5 animate-spin text-blue-600 mx-auto" />
+                      ) : ticket.status === 'ปิดงาน' ? (
+                        <span className="text-slate-400 text-xs">-</span>
                       ) : (
                         <select
                           value={ticket.status}
@@ -208,7 +270,8 @@ export default function TicketsPage() {
                         >
                           <option value="รอรับเรื่อง">รอรับเรื่อง</option>
                           <option value="กำลังดำเนินการ">กำลังดำเนินการ</option>
-                          <option value="เสร็จสิ้น">เสร็จสิ้น</option>
+                          <option value="รอผู้ใช้ยืนยัน">รอผู้ใช้ยืนยัน</option>
+                          <option value="ปิดงาน" disabled>ปิดงาน (ให้ผู้ใช้ทำ)</option>
                         </select>
                       )}
                     </td>
@@ -224,6 +287,54 @@ export default function TicketsPage() {
                 )}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-md p-6 relative">
+            <button 
+              onClick={() => setShowModal(false)}
+              className="absolute right-4 top-4 text-slate-400 hover:text-slate-600"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <h2 className="text-lg font-bold text-slate-800 mb-4">บันทึกผลการซ่อม</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">ช่างผู้ดำเนินการ</label>
+                <select 
+                  value={technicianName}
+                  onChange={(e) => setTechnicianName(e.target.value)}
+                  className="w-full p-2.5 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {TECHNICIANS.map(tech => (
+                    <option key={tech} value={tech}>{tech}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">รายละเอียดการแก้ไข</label>
+                <textarea 
+                  value={resolutionNotes}
+                  onChange={(e) => setResolutionNotes(e.target.value)}
+                  rows={3}
+                  className="w-full p-2.5 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  placeholder="อธิบายว่าซ่อมหรือแก้ไขอย่างไร..."
+                />
+              </div>
+              <div className="pt-2">
+                <button
+                  onClick={handleConfirmCompletion}
+                  disabled={!resolutionNotes.trim()}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  บันทึกและตั้งสถานะ "รอผู้ใช้ยืนยัน"
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
