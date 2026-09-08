@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Loader2, Search, Edit, AlertCircle, Clock, CheckCircle, ListTodo, Image as ImageIcon, X, Star } from 'lucide-react';
+import { Loader2, Search, Edit, AlertCircle, Clock, CheckCircle, ListTodo, Image as ImageIcon, X, Star, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 
 type Ticket = {
@@ -28,6 +28,24 @@ const TECHNICIANS = [
   'จิระเดช ช่างสาย',
   'ธนกฤต นิธิตันติปัญญา'
 ];
+
+function formatDuration(startStr: string, endStr?: string | null): string {
+  if (!endStr) return '-';
+  const diffMs = Math.max(0, new Date(endStr).getTime() - new Date(startStr).getTime());
+  const diffMinutes = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMinutes / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffDays > 0) {
+    const remainHours = diffHours % 24;
+    return `${diffDays} วัน ${remainHours > 0 ? `${remainHours} ชม.` : ''}`.trim();
+  }
+  if (diffHours > 0) {
+    const remainMins = diffMinutes % 60;
+    return `${diffHours} ชม. ${remainMins > 0 ? `${remainMins} นาที` : ''}`.trim();
+  }
+  return `${diffMinutes} นาที`;
+}
 
 export default function TicketsPage() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -141,10 +159,52 @@ export default function TicketsPage() {
     setUpdatingId(null);
   };
 
+  const handleDeleteTicket = async (ticket: Ticket) => {
+    if (!window.confirm(`ยืนยันการลบใบแจ้งซ่อม ${ticket.ticket_number} ใช่หรือไม่?\n(ข้อมูลจะถูกลบถาวรและไม่สามารถกู้คืนได้)`)) {
+      return;
+    }
+
+    setUpdatingId(ticket.id);
+    const { error } = await supabase
+      .from('repair_tickets')
+      .delete()
+      .eq('id', ticket.id);
+
+    if (!error) {
+      setTickets(prev => prev.filter(t => t.id !== ticket.id));
+    } else {
+      alert('เกิดข้อผิดพลาดในการลบใบแจ้งซ่อม: ' + error.message);
+    }
+    setUpdatingId(null);
+  };
+
   const closedTickets = tickets.filter(t => t.status === 'ปิดงาน');
   const ratedTickets = closedTickets.filter(t => t.rating && t.rating > 0);
   const avgRating = ratedTickets.length > 0 
     ? (ratedTickets.reduce((sum, t) => sum + (t.rating || 0), 0) / ratedTickets.length).toFixed(1)
+    : null;
+
+  const closedWithTime = closedTickets.filter(t => t.closed_at && t.created_at);
+  const avgDurationText = closedWithTime.length > 0
+    ? (() => {
+        const totalMs = closedWithTime.reduce(
+          (sum, t) => sum + Math.max(0, new Date(t.closed_at!).getTime() - new Date(t.created_at).getTime()),
+          0
+        );
+        const avgMinutes = Math.round(totalMs / closedWithTime.length / (1000 * 60));
+        const avgHours = Math.floor(avgMinutes / 60);
+        const avgDays = Math.floor(avgHours / 24);
+
+        if (avgDays > 0) {
+          const remainHours = avgHours % 24;
+          return `${avgDays} วัน ${remainHours > 0 ? `${remainHours} ชม.` : ''}`.trim();
+        }
+        if (avgHours > 0) {
+          const remainMins = avgMinutes % 60;
+          return `${avgHours} ชม. ${remainMins > 0 ? `${remainMins} นาที` : ''}`.trim();
+        }
+        return `${avgMinutes} นาที`;
+      })()
     : null;
 
   const filteredTickets = tickets.filter(t => 
@@ -221,6 +281,12 @@ export default function TicketsPage() {
                   </span>
                 )}
               </div>
+              {avgDurationText && (
+                <div className="text-[11px] text-slate-500 mt-1 flex items-center gap-1">
+                  <Clock className="w-3 h-3 text-slate-400" />
+                  เฉลี่ย: <span className="font-semibold text-emerald-600">{avgDurationText}</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -286,6 +352,12 @@ export default function TicketsPage() {
                           <strong>{ticket.technician_name} แก้ไข:</strong> {ticket.resolution_notes}
                         </div>
                       )}
+                      {ticket.status === 'ปิดงาน' && ticket.closed_at && !(ticket.rating || ticket.feedback) && (
+                        <div className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg">
+                          <Clock className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>ใช้เวลาปิดงาน: {formatDuration(ticket.created_at, ticket.closed_at)}</span>
+                        </div>
+                      )}
                       {ticket.status === 'ปิดงาน' && (ticket.rating || ticket.feedback) && (
                         <div className="mt-2 bg-amber-50 p-2.5 rounded-lg border border-amber-200/80 text-xs space-y-1.5">
                           <div className="flex items-center gap-1.5 font-semibold text-amber-900">
@@ -306,8 +378,12 @@ export default function TicketsPage() {
                             </div>
                           )}
                           {ticket.closed_at && (
-                            <div className="text-[10px] text-slate-400">
-                              ปิดงานเมื่อ: {new Date(ticket.closed_at).toLocaleDateString('th-TH', { hour: '2-digit', minute: '2-digit' })}
+                            <div className="text-[10px] text-slate-500 flex items-center justify-between pt-1 border-t border-amber-200/60">
+                              <span>ปิดงานเมื่อ: {new Date(ticket.closed_at).toLocaleDateString('th-TH', { hour: '2-digit', minute: '2-digit' })}</span>
+                              <span className="font-semibold text-emerald-700 flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                ใช้เวลา: {formatDuration(ticket.created_at, ticket.closed_at)}
+                              </span>
                             </div>
                           )}
                         </div>
@@ -344,19 +420,30 @@ export default function TicketsPage() {
                     <td className="p-4 text-center">
                       {updatingId === ticket.id ? (
                         <Loader2 className="w-5 h-5 animate-spin text-blue-600 mx-auto" />
-                      ) : ticket.status === 'ปิดงาน' ? (
-                        <span className="text-slate-400 text-xs">-</span>
                       ) : (
-                        <select
-                          value={ticket.status}
-                          onChange={(e) => handleUpdateStatus(ticket.id, e.target.value)}
-                          className="text-xs border border-slate-200 rounded p-1.5 bg-white outline-none focus:ring-1 focus:ring-blue-500"
-                        >
-                          <option value="รอรับเรื่อง">รอรับเรื่อง</option>
-                          <option value="กำลังดำเนินการ">กำลังดำเนินการ</option>
-                          <option value="รอผู้ใช้ยืนยัน">รอผู้ใช้ยืนยัน</option>
-                          <option value="ปิดงาน" disabled>ปิดงาน (ให้ผู้ใช้ทำ)</option>
-                        </select>
+                        <div className="flex items-center justify-center gap-1.5">
+                          {ticket.status !== 'ปิดงาน' ? (
+                            <select
+                              value={ticket.status}
+                              onChange={(e) => handleUpdateStatus(ticket.id, e.target.value)}
+                              className="text-xs border border-slate-200 rounded p-1.5 bg-white outline-none focus:ring-1 focus:ring-blue-500"
+                            >
+                              <option value="รอรับเรื่อง">รอรับเรื่อง</option>
+                              <option value="กำลังดำเนินการ">กำลังดำเนินการ</option>
+                              <option value="รอผู้ใช้ยืนยัน">รอผู้ใช้ยืนยัน</option>
+                              <option value="ปิดงาน" disabled>ปิดงาน (ให้ผู้ใช้ทำ)</option>
+                            </select>
+                          ) : (
+                            <span className="text-slate-400 text-xs px-2 py-1 bg-slate-50 rounded border border-slate-100">ปิดงานแล้ว</span>
+                          )}
+                          <button
+                            onClick={() => handleDeleteTicket(ticket)}
+                            title={`ลบใบแจ้งซ่อม ${ticket.ticket_number}`}
+                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>
