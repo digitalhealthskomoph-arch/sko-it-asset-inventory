@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { Loader2, Star, CheckCircle, ArrowLeft } from 'lucide-react';
 import liff from '@line/liff';
 
-const LIFF_EVALUATE_ID = '2008591648-4Sg41AcX';
+const LIFF_EVALUATE_ID = '2008591648-wGRKxePd';
 
 function EvaluateContent() {
   const searchParams = useSearchParams();

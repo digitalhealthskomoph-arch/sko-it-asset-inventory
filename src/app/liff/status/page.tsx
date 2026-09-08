@@ -19,7 +19,7 @@ export default function StatusTrackingPage() {
   useEffect(() => {
     const initLiff = async () => {
       try {
-        await liff.init({ liffId: '2008591648-0lfikgQW' });
+        await liff.init({ liffId: '2008591648-wGRKxePd' });
         if (liff.isLoggedIn()) {
           const profile = await liff.getProfile();
           setLineUserId(profile.userId);

@@ -2,9 +2,10 @@ import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
 const LINE_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN || '';
-const LIFF_REPAIR_URL = 'https://liff.line.me/2008591648-wGRKxePd';
-const LIFF_STATUS_URL = 'https://liff.line.me/2008591648-0lfikgQW';
-const LIFF_EVALUATE_URL = 'https://liff.line.me/2008591648-4Sg41AcX';
+const LIFF_BASE = 'https://liff.line.me/2008591648-wGRKxePd';
+const LIFF_REPAIR_URL  = `${LIFF_BASE}/liff/repair`;
+const LIFF_STATUS_URL  = `${LIFF_BASE}/liff/status`;
+const LIFF_EVALUATE_URL = `${LIFF_BASE}/liff/evaluate`;
 
 export async function POST(req: Request) {
   try {
