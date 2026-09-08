@@ -161,11 +161,26 @@ export default function TicketsPage() {
   };
 
   const handleDeleteTicket = async (ticket: Ticket) => {
-    if (!window.confirm(`ยืนยันการลบใบแจ้งซ่อม ${ticket.ticket_number} ใช่หรือไม่?\n(ข้อมูลจะถูกลบถาวรและไม่สามารถกู้คืนได้)`)) {
+    if (!window.confirm(`ยืนยันการลบใบแจ้งซ่อม ${ticket.ticket_number} ใช่หรือไม่?\n(ข้อมูลใบแจ้งซ่อม ประวัติของอุปกรณ์ และไฟล์ภาพถ่ายจะถูกลบถาวรทั้งหมด)`)) {
       return;
     }
 
     setUpdatingId(ticket.id);
+
+    // 1. Delete image from Cloudflare R2 storage if exists
+    if (ticket.image_url) {
+      try {
+        await fetch('/api/upload', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fileUrl: ticket.image_url }),
+        });
+      } catch (imgErr) {
+        console.warn('Could not delete image from storage:', imgErr);
+      }
+    }
+
+    // 2. Delete ticket record from Supabase
     const { error } = await supabase
       .from('repair_tickets')
       .delete()
