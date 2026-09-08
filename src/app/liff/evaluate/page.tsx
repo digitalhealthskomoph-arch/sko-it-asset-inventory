@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { Loader2, Star, CheckCircle, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 import liff from '@line/liff';
 
 const LIFF_EVALUATE_ID = '2008591648-wGRKxePd';
@@ -21,10 +22,26 @@ function EvaluateContent() {
   const [feedback, setFeedback] = useState('');
   const [success, setSuccess] = useState(false);
 
+  const isPreview = searchParams.get('preview') === 'true' || ticketId === 'demo';
+
   useEffect(() => {
+    if (isPreview) {
+      setTicket({
+        id: 'demo',
+        ticket_number: 'IT-690123',
+        description: 'เปิดเครื่องคอมพิวเตอร์ไม่ติด มีไฟกะพริบสีส้มและเสียงปี๊บ 3 ครั้ง',
+        technician_name: 'ณัฏฐ์ดนัย ตั้งธนพรสกุล',
+        resolution_notes: 'ตรวจสอบพบแรม (RAM) สกปรก ทำการถอดทำความสะอาดหน้าสัมผัสทองแดงด้วยยางลบและใส่กลับ ทดสอบเปิดเครื่องใช้งานได้ตามปกติ',
+        status: 'รอผู้ใช้ยืนยัน',
+        personnel: { first_name: 'เจ้าหน้าที่', last_name: 'สสจ.สระแก้ว' }
+      });
+      setLoading(false);
+      return;
+    }
+
     if (ticketId) fetchTicket(ticketId);
     else setLoading(false);
-  }, [ticketId]);
+  }, [ticketId, isPreview]);
 
   const fetchTicket = async (id: string) => {
     const { data } = await supabase
@@ -38,6 +55,12 @@ function EvaluateContent() {
 
   const handleSubmit = async () => {
     if (rating === 0) return alert('กรุณาให้คะแนนความพึงพอใจ');
+    
+    if (isPreview) {
+      setSuccess(true);
+      return;
+    }
+
     setSubmitting(true);
     const { error } = await supabase
       .from('repair_tickets')
@@ -52,7 +75,29 @@ function EvaluateContent() {
     return <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>;
   }
 
-  if (!ticketId || !ticket) {
+  if (!ticketId && !isPreview) {
+    return (
+      <div className="max-w-md mx-auto min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
+        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 w-full">
+          <div className="w-14 h-14 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Star className="w-7 h-7" />
+          </div>
+          <h2 className="text-lg font-bold text-slate-800 mb-2">หน้าประเมินความพึงพอใจและปิดงาน</h2>
+          <p className="text-slate-500 text-sm mb-6">
+            ลิงก์นี้ต้องระบุรหัสงานซ่อม (ปกติระบบจะส่งลิงก์อัตโนมัติเมื่อพิมพ์คำว่า <span className="font-semibold text-blue-600">"ปิดงาน"</span> ใน LINE)
+          </p>
+          <Link
+            href="/liff/evaluate?preview=true"
+            className="block w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-xl transition-colors shadow-sm"
+          >
+            👀 ดูหน้าตาตัวอย่างแบบประเมิน (Demo Preview)
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (!ticket) {
     return (
       <div className="p-8 text-center text-slate-500">
         <p className="font-medium">ไม่พบรหัสงานที่ต้องการประเมิน</p>

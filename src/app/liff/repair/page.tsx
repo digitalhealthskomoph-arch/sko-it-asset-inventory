@@ -167,7 +167,27 @@ export default function RepairFormPage() {
     if (!error) {
       setTicketNumber(generatedTicket);
       setSuccess(true);
-      // NOTE: LINE LIFF integration (liff.sendMessages) will be added here later
+
+      // Send Push notification to LINE Technician Group
+      const deptName = departments.find(d => d.id === selectedDept)?.name || '';
+      const person = personnel.find(p => p.id === selectedPersonnel);
+      const requesterName = person ? `${person.first_name} ${person.last_name}` : '';
+      const asset = assets.find(a => a.id === selectedAsset);
+      const assetInfo = asset ? `${asset.asset_number} (${asset.brand_model})` : '';
+
+      fetch('/api/notify-technician', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ticketNumber: generatedTicket,
+          requesterName,
+          department: deptName,
+          issueType,
+          assetInfo,
+          description,
+          imageUrl,
+        }),
+      }).catch(err => console.error('Notify technician error:', err));
     } else {
       alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
       console.error(error);
