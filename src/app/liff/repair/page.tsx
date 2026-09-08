@@ -34,23 +34,10 @@ export default function RepairFormPage() {
   const [success, setSuccess] = useState(false);
   const [ticketNumber, setTicketNumber] = useState('');
 
-  // Initialize LIFF
+  // Read userId from sessionStorage (set by /liff gateway page)
   useEffect(() => {
-    const initLiff = async () => {
-      try {
-        await liff.init({ liffId: '2008591648-wGRKxePd' });
-        if (liff.isLoggedIn()) {
-          const profile = await liff.getProfile();
-          setLineUserId(profile.userId);
-        } else {
-          // If not logged in and not in LINE app, prompt login or let it be null
-          // liff.login();
-        }
-      } catch (err: any) {
-        setLiffError(err.toString());
-      }
-    };
-    initLiff();
+    const uid = sessionStorage.getItem('liff_user_id');
+    if (uid) setLineUserId(uid);
   }, []);
 
   // 1. Fetch Departments and Categories on load

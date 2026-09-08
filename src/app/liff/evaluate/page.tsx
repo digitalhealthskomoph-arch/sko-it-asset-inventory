@@ -22,7 +22,6 @@ function EvaluateContent() {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    liff.init({ liffId: LIFF_EVALUATE_ID }).catch(console.error);
     if (ticketId) fetchTicket(ticketId);
     else setLoading(false);
   }, [ticketId]);

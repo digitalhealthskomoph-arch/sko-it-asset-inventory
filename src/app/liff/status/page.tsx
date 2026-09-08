@@ -17,21 +17,13 @@ export default function StatusTrackingPage() {
   const [lineUserId, setLineUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    const initLiff = async () => {
-      try {
-        await liff.init({ liffId: '2008591648-wGRKxePd' });
-        if (liff.isLoggedIn()) {
-          const profile = await liff.getProfile();
-          setLineUserId(profile.userId);
-          fetchMyTickets(profile.userId);
-        }
-      } catch (err) {
-        console.error('LIFF init failed', err);
-      } finally {
-        setInitLoading(false);
-      }
-    };
-    initLiff();
+    // Read userId from sessionStorage (set by /liff gateway)
+    const uid = sessionStorage.getItem('liff_user_id');
+    if (uid) {
+      setLineUserId(uid);
+      fetchMyTickets(uid);
+    }
+    setInitLoading(false);
   }, []);
 
   const fetchMyTickets = async (uid: string) => {

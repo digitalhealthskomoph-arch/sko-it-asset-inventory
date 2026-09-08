@@ -2,10 +2,12 @@ import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
 const LINE_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN || '';
+// Endpoint URL = https://sko-it-asset-inventory.vercel.app/liff
+// So LIFF sub-paths become: /liff.line.me/ID/repair → /liff/repair
 const LIFF_BASE = 'https://liff.line.me/2008591648-wGRKxePd';
-const LIFF_REPAIR_URL  = `${LIFF_BASE}/liff/repair`;
-const LIFF_STATUS_URL  = `${LIFF_BASE}/liff/status`;
-const LIFF_EVALUATE_URL = `${LIFF_BASE}/liff/evaluate`;
+const LIFF_REPAIR_URL   = `${LIFF_BASE}/repair`;
+const LIFF_STATUS_URL   = `${LIFF_BASE}/status`;
+const LIFF_EVALUATE_URL = `${LIFF_BASE}/evaluate`;
 
 export async function POST(req: Request) {
   try {
