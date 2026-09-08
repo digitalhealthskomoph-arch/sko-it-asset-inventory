@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
 const LINE_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN || '';
-const LIFF_ID = process.env.NEXT_PUBLIC_LIFF_ID || '2008591648-wGRKxePd';
-const LIFF_URL = `https://liff.line.me/${LIFF_ID}`;
+const LIFF_REPAIR_URL = 'https://liff.line.me/2008591648-wGRKxePd';
+const LIFF_STATUS_URL = 'https://liff.line.me/2008591648-0lfikgQW';
+const LIFF_EVALUATE_URL = 'https://liff.line.me/2008591648-4Sg41AcX';
 
 export async function POST(req: Request) {
   try {
@@ -64,7 +65,7 @@ async function sendMainMenu(replyToken: string) {
                 action: {
                   type: 'uri',
                   label: '🛠️ แจ้งปัญหา IT',
-                  uri: `${LIFF_URL}/repair`
+                  uri: LIFF_REPAIR_URL
                 }
               },
               {
@@ -73,7 +74,7 @@ async function sendMainMenu(replyToken: string) {
                 action: {
                   type: 'uri',
                   label: '🔍 ติดตามสถานะ',
-                  uri: `${LIFF_URL}/status`
+                  uri: LIFF_STATUS_URL
                 }
               }
             ]
@@ -87,7 +88,6 @@ async function sendMainMenu(replyToken: string) {
 }
 
 async function handleCloseTicket(replyToken: string, userId: string) {
-  // Query tickets waiting for confirmation
   const { data: tickets, error } = await supabase
     .from('repair_tickets')
     .select('id, ticket_number, description, technician_name')
@@ -102,7 +102,6 @@ async function handleCloseTicket(replyToken: string, userId: string) {
     return;
   }
 
-  // Generate Flex message bubbles for each waiting ticket
   const bubbles = tickets.slice(0, 10).map((ticket) => ({
     type: 'bubble',
     body: {
@@ -125,7 +124,7 @@ async function handleCloseTicket(replyToken: string, userId: string) {
           action: {
             type: 'uri',
             label: '⭐ ประเมินและปิดงาน',
-            uri: `${LIFF_URL}/evaluate/${ticket.id}`
+            uri: `${LIFF_EVALUATE_URL}?ticketId=${ticket.id}`
           }
         }
       ]
@@ -150,22 +149,10 @@ async function handleCloseTicket(replyToken: string, userId: string) {
 }
 
 async function replyToLine(payload: any) {
-  if (!LINE_ACCESS_TOKEN) {
-    console.error('Missing LINE_CHANNEL_ACCESS_TOKEN');
-    return;
-  }
-
-  const res = await fetch('https://api.line.me/v2/bot/message/reply', {
+  if (!LINE_ACCESS_TOKEN) return;
+  await fetch('https://api.line.me/v2/bot/message/reply', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${LINE_ACCESS_TOKEN}`
-    },
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${LINE_ACCESS_TOKEN}` },
     body: JSON.stringify(payload)
   });
-
-  if (!res.ok) {
-    const err = await res.text();
-    console.error('LINE Reply API Error:', err);
-  }
 }

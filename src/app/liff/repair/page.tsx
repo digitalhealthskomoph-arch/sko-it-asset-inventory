@@ -38,7 +38,7 @@ export default function RepairFormPage() {
   useEffect(() => {
     const initLiff = async () => {
       try {
-        await liff.init({ liffId: process.env.NEXT_PUBLIC_LIFF_ID || '' });
+        await liff.init({ liffId: '2008591648-wGRKxePd' });
         if (liff.isLoggedIn()) {
           const profile = await liff.getProfile();
           setLineUserId(profile.userId);
