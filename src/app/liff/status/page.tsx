@@ -64,8 +64,17 @@ export default function StatusTrackingPage() {
           .order('created_at', { ascending: false })
           .limit(10);
 
-        if (uidData) {
+        if (uidData && uidData.length > 0) {
           dataList = [...uidData];
+          try {
+            const saved: string[] = JSON.parse(localStorage.getItem('my_ticket_numbers') || '[]');
+            for (const item of uidData) {
+              if (!saved.includes(item.ticket_number)) {
+                saved.unshift(item.ticket_number);
+              }
+            }
+            localStorage.setItem('my_ticket_numbers', JSON.stringify(saved.slice(0, 15)));
+          } catch (e) {}
         }
       }
 
@@ -111,45 +120,21 @@ export default function StatusTrackingPage() {
     setSearchResults(null);
 
     try {
-      let searchId = query.toUpperCase();
-      const isDigitsOnly = /^\d+$/.test(searchId);
+      const cleanNum = query.replace(/^IT-/i, '').trim();
 
-      if (isDigitsOnly) {
-        const year = new Date().getFullYear() + 543;
-        searchId = `IT-${year.toString().slice(2)}${searchId}`;
-      }
+      // Search by ticket_number ilike (e.g. 697552, 7552, IT-697552) or symptom description
+      const { data, error } = await supabase
+        .from('repair_tickets')
+        .select(`
+          *,
+          personnel (first_name, last_name),
+          assets (asset_number, brand_model)
+        `)
+        .or(`ticket_number.ilike.%${query}%,ticket_number.ilike.%${cleanNum}%,description.ilike.%${query}%`)
+        .order('created_at', { ascending: false })
+        .limit(10);
 
-      let results: any[] = [];
-
-      // 1. If it looks like a ticket number
-      if (searchId.startsWith('IT-') || isDigitsOnly) {
-        const { data } = await supabase
-          .from('repair_tickets')
-          .select(`
-            *,
-            personnel (first_name, last_name),
-            assets (asset_number, brand_model)
-          `)
-          .eq('ticket_number', searchId);
-
-        if (data && data.length > 0) results = data;
-      }
-
-      // 2. If no ticket found by ID, search by description or symptom
-      if (results.length === 0) {
-        const { data } = await supabase
-          .from('repair_tickets')
-          .select(`
-            *,
-            personnel (first_name, last_name),
-            assets (asset_number, brand_model)
-          `)
-          .ilike('description', `%${query}%`)
-          .order('created_at', { ascending: false })
-          .limit(5);
-
-        if (data && data.length > 0) results = data;
-      }
+      const results = data || [];
 
       // Save found ticket numbers to local device storage
       if (results.length > 0) {

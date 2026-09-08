@@ -83,6 +83,29 @@ export default function TicketsPage() {
     setUpdatingId(null);
   };
 
+  const handleAssignTechnician = async (id: string, name: string) => {
+    setUpdatingId(id);
+    const updatePayload: any = { technician_name: name || null };
+    
+    // If ticket was "รอรับเรื่อง" and we assign a technician, advance to "กำลังดำเนินการ"
+    const currentTicket = tickets.find(t => t.id === id);
+    if (currentTicket && currentTicket.status === 'รอรับเรื่อง' && name) {
+      updatePayload.status = 'กำลังดำเนินการ';
+    }
+
+    const { error } = await supabase
+      .from('repair_tickets')
+      .update(updatePayload)
+      .eq('id', id);
+
+    if (!error) {
+      setTickets(tickets.map(t => t.id === id ? { ...t, ...updatePayload } : t));
+    } else {
+      alert('เกิดข้อผิดพลาดในการมอบหมายช่าง');
+    }
+    setUpdatingId(null);
+  };
+
   const handleConfirmCompletion = async () => {
     if (!selectedTicketId || !resolutionNotes.trim()) {
       alert('กรุณากรอกวิธีการแก้ไข');
@@ -201,6 +224,7 @@ export default function TicketsPage() {
                   <th className="p-4">ผู้แจ้ง/กลุ่มงาน</th>
                   <th className="p-4">อุปกรณ์ (ถ้ามี)</th>
                   <th className="p-4">อาการเสีย/การแก้ไข</th>
+                  <th className="p-4">ช่างผู้รับผิดชอบ</th>
                   <th className="p-4 text-center">สถานะ</th>
                   <th className="p-4 text-center">จัดการ</th>
                 </tr>
@@ -247,6 +271,24 @@ export default function TicketsPage() {
                         </div>
                       )}
                     </td>
+                    <td className="p-4">
+                      {ticket.status === 'ปิดงาน' ? (
+                        <span className="text-slate-600 font-medium text-xs">
+                          {ticket.technician_name || '-'}
+                        </span>
+                      ) : (
+                        <select
+                          value={ticket.technician_name || ''}
+                          onChange={(e) => handleAssignTechnician(ticket.id, e.target.value)}
+                          className="text-xs border border-slate-200 rounded-lg p-1.5 bg-white outline-none focus:ring-1 focus:ring-blue-500 w-full min-w-[130px]"
+                        >
+                          <option value="">-- มอบหมายช่าง --</option>
+                          {TECHNICIANS.map(tech => (
+                            <option key={tech} value={tech}>{tech}</option>
+                          ))}
+                        </select>
+                      )}
+                    </td>
                     <td className="p-4 text-center">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
                         ticket.status === 'ปิดงาน' ? 'bg-green-50 text-green-700 border-green-200' :
@@ -280,7 +322,7 @@ export default function TicketsPage() {
                 
                 {filteredTickets.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="p-8 text-center text-slate-500">
+                    <td colSpan={7} className="p-8 text-center text-slate-500">
                       ไม่พบข้อมูลแจ้งซ่อม
                     </td>
                   </tr>
