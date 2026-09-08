@@ -34,10 +34,28 @@ export default function RepairFormPage() {
   const [success, setSuccess] = useState(false);
   const [ticketNumber, setTicketNumber] = useState('');
 
-  // Read userId from sessionStorage (set by /liff gateway page)
+  // Read or initialize userId from LIFF
   useEffect(() => {
-    const uid = sessionStorage.getItem('liff_user_id');
-    if (uid) setLineUserId(uid);
+    const initUser = async () => {
+      // 1. Try sessionStorage first
+      const storedUid = sessionStorage.getItem('liff_user_id');
+      if (storedUid) {
+        setLineUserId(storedUid);
+        return;
+      }
+      // 2. Initialize LIFF directly
+      try {
+        await liff.init({ liffId: '2008591648-wGRKxePd' });
+        if (liff.isLoggedIn()) {
+          const profile = await liff.getProfile();
+          setLineUserId(profile.userId);
+          sessionStorage.setItem('liff_user_id', profile.userId);
+        }
+      } catch (err) {
+        console.error('LIFF init in repair page:', err);
+      }
+    };
+    initUser();
   }, []);
 
   // 1. Fetch Departments and Categories on load
@@ -167,6 +185,15 @@ export default function RepairFormPage() {
     if (!error) {
       setTicketNumber(generatedTicket);
       setSuccess(true);
+
+      // Save ticket to local device storage so it can be tracked without typing
+      try {
+        const saved = JSON.parse(localStorage.getItem('my_ticket_numbers') || '[]');
+        if (!saved.includes(generatedTicket)) {
+          saved.unshift(generatedTicket);
+          localStorage.setItem('my_ticket_numbers', JSON.stringify(saved.slice(0, 15)));
+        }
+      } catch (e) {}
 
       // Send Push notification to LINE Technician Group
       const deptName = departments.find(d => d.id === selectedDept)?.name || '';

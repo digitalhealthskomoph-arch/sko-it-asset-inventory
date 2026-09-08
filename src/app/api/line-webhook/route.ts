@@ -26,6 +26,8 @@ export async function POST(req: Request) {
 
         if (text === 'แจ้งซ่อม' || text === 'เมนู') {
           await sendMainMenu(replyToken);
+        } else if (text === 'ติดตามสถานะ' || text === 'สถานะ' || text === 'เช็คสถานะ') {
+          await handleTrackStatus(replyToken, userId);
         } else if (text === 'ปิดงาน') {
           await handleCloseTicket(replyToken, userId);
         }
@@ -88,6 +90,133 @@ async function sendMainMenu(replyToken: string) {
   };
 
   await replyToLine(payload);
+}
+
+async function handleTrackStatus(replyToken: string, userId: string) {
+  const { data: tickets, error } = await supabase
+    .from('repair_tickets')
+    .select('id, ticket_number, description, status, technician_name, created_at')
+    .eq('line_user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(5);
+
+  if (error || !tickets || tickets.length === 0) {
+    await replyToLine({
+      replyToken,
+      messages: [
+        {
+          type: 'flex',
+          altText: 'ตรวจสอบสถานะงานซ่อม',
+          contents: {
+            type: 'bubble',
+            body: {
+              type: 'box',
+              layout: 'vertical',
+              spacing: 'md',
+              contents: [
+                { type: 'text', text: '🔍 ตรวจสอบสถานะงานซ่อม', weight: 'bold', size: 'md', color: '#1e293b' },
+                { type: 'text', text: 'ไม่พบรายการงานซ่อมที่ผูกกับบัญชี LINE ของคุณ สามารถกดค้นหาด้วยรหัสหรือชื่อได้ที่ปุ่มด้านล่างครับ', size: 'sm', color: '#64748b', wrap: true }
+              ]
+            },
+            footer: {
+              type: 'box',
+              layout: 'vertical',
+              contents: [
+                {
+                  type: 'button',
+                  style: 'primary',
+                  color: '#059669',
+                  action: {
+                    type: 'uri',
+                    label: '🔎 ค้นหาใบแจ้งซ่อม',
+                    uri: LIFF_STATUS_URL
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    });
+    return;
+  }
+
+  const bubbles = tickets.map((t) => {
+    const statusColor =
+      t.status === 'ปิดงาน' ? '#16a34a' :
+      t.status === 'รอผู้ใช้ยืนยัน' ? '#2563eb' :
+      t.status === 'กำลังดำเนินการ' ? '#7c3aed' :
+      '#ea580c';
+
+    return {
+      type: 'bubble',
+      header: {
+        type: 'box',
+        layout: 'horizontal',
+        contents: [
+          { type: 'text', text: t.ticket_number, weight: 'bold', size: 'md', color: '#ffffff' },
+          { type: 'text', text: t.status, size: 'xs', color: '#ffffff', align: 'end', weight: 'bold' }
+        ],
+        backgroundColor: statusColor
+      },
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        spacing: 'sm',
+        contents: [
+          { type: 'text', text: 'อาการเสีย:', size: 'xs', color: '#64748b' },
+          { type: 'text', text: t.description || '-', size: 'sm', color: '#1e293b', wrap: true, maxLines: 2 },
+          ...(t.technician_name ? [
+            { type: 'text', text: `👨‍🔧 ช่าง: ${t.technician_name}`, size: 'xs', color: '#059669', margin: 'sm' }
+          ] : [])
+        ]
+      },
+      footer: {
+        type: 'box',
+        layout: 'vertical',
+        spacing: 'sm',
+        contents: [
+          ...(t.status === 'รอผู้ใช้ยืนยัน' ? [
+            {
+              type: 'button',
+              style: 'primary',
+              color: '#2563eb',
+              height: 'sm',
+              action: {
+                type: 'uri',
+                label: '⭐ ประเมินและปิดงาน',
+                uri: `${LIFF_EVALUATE_URL}?ticketId=${t.id}`
+              }
+            }
+          ] : []),
+          {
+            type: 'button',
+            style: 'secondary',
+            height: 'sm',
+            action: {
+              type: 'uri',
+              label: '📋 ดูรายละเอียด',
+              uri: LIFF_STATUS_URL
+            }
+          }
+        ]
+      }
+    };
+  });
+
+  await replyToLine({
+    replyToken,
+    messages: [
+      {
+        type: 'flex',
+        altText: 'สถานะงานซ่อมของคุณ',
+        contents: {
+          type: 'carousel',
+          contents: bubbles
+        }
+      }
+    ]
+  });
 }
 
 async function handleCloseTicket(replyToken: string, userId: string) {
