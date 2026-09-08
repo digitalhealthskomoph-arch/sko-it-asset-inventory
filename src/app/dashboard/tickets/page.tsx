@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Loader2, Search, Edit, AlertCircle, Clock, CheckCircle, ListTodo, Image as ImageIcon, X } from 'lucide-react';
+import { Loader2, Search, Edit, AlertCircle, Clock, CheckCircle, ListTodo, Image as ImageIcon, X, Star } from 'lucide-react';
 import Link from 'next/link';
 
 type Ticket = {
@@ -15,6 +15,9 @@ type Ticket = {
   created_at: string;
   technician_name: string | null;
   resolution_notes: string | null;
+  rating?: number | null;
+  feedback?: string | null;
+  closed_at?: string | null;
   personnel: { first_name: string; last_name: string } | null;
   departments: { name: string } | null;
   assets: { asset_number: string; brand_model: string } | null;
@@ -49,6 +52,7 @@ export default function TicketsPage() {
       .from('repair_tickets')
       .select(`
         id, ticket_number, issue_type, description, status, image_url, created_at, technician_name, resolution_notes,
+        rating, feedback, closed_at,
         personnel (first_name, last_name),
         departments (name),
         assets (asset_number, brand_model)
@@ -137,6 +141,12 @@ export default function TicketsPage() {
     setUpdatingId(null);
   };
 
+  const closedTickets = tickets.filter(t => t.status === 'ปิดงาน');
+  const ratedTickets = closedTickets.filter(t => t.rating && t.rating > 0);
+  const avgRating = ratedTickets.length > 0 
+    ? (ratedTickets.reduce((sum, t) => sum + (t.rating || 0), 0) / ratedTickets.length).toFixed(1)
+    : null;
+
   const filteredTickets = tickets.filter(t => 
     t.ticket_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
     t.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -202,8 +212,14 @@ export default function TicketsPage() {
             </div>
             <div>
               <div className="text-sm text-slate-500 font-medium">ปิดงานแล้ว</div>
-              <div className="text-2xl font-bold text-slate-800">
-                {tickets.filter(t => t.status === 'ปิดงาน').length}
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-bold text-slate-800">{closedTickets.length}</span>
+                {avgRating && (
+                  <span className="text-xs text-amber-600 font-semibold flex items-center gap-0.5">
+                    <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                    {avgRating} / 5
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -268,6 +284,32 @@ export default function TicketsPage() {
                       {ticket.resolution_notes && (
                         <div className="mt-2 bg-green-50 p-2 rounded border border-green-100 text-xs text-green-700">
                           <strong>{ticket.technician_name} แก้ไข:</strong> {ticket.resolution_notes}
+                        </div>
+                      )}
+                      {ticket.status === 'ปิดงาน' && (ticket.rating || ticket.feedback) && (
+                        <div className="mt-2 bg-amber-50 p-2.5 rounded-lg border border-amber-200/80 text-xs space-y-1.5">
+                          <div className="flex items-center gap-1.5 font-semibold text-amber-900">
+                            <span>ผลประเมิน:</span>
+                            <div className="flex text-amber-400">
+                              {[1, 2, 3, 4, 5].map((s) => (
+                                <Star
+                                  key={s}
+                                  className={`w-3.5 h-3.5 ${s <= (ticket.rating || 0) ? 'fill-amber-400 text-amber-400' : 'text-slate-200'}`}
+                                />
+                              ))}
+                            </div>
+                            <span className="text-amber-800 font-bold text-[11px]">({ticket.rating}/5 ดาว)</span>
+                          </div>
+                          {ticket.feedback && (
+                            <div className="text-slate-700 bg-white/80 p-2 rounded border border-amber-100 text-xs italic">
+                              "{ticket.feedback}"
+                            </div>
+                          )}
+                          {ticket.closed_at && (
+                            <div className="text-[10px] text-slate-400">
+                              ปิดงานเมื่อ: {new Date(ticket.closed_at).toLocaleDateString('th-TH', { hour: '2-digit', minute: '2-digit' })}
+                            </div>
+                          )}
                         </div>
                       )}
                     </td>

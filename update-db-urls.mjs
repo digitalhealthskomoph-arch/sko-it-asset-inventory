@@ -3,10 +3,10 @@ import { createClient } from '@supabase/supabase-js';
 // ==========================================
 // 1. ตั้งค่า Supabase (ใช้ Service Role Key เพื่อให้อัปเดต DB ได้ทั้งหมด)
 // ==========================================
-const SUPABASE_URL = 'https://jxvnpqxvbnyxcvodggkw.supabase.co'; 
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp4dm5wcXh2Ym55eGN2b2RnZ2t3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NTk2NzE4NywiZXhwIjoyMTAxNTQzMTg3fQ.oVFpY_fgE9i5LH0SsLX7lRadPob0cjJBocXtXgLUc1U'; 
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://jxvnpqxvbnyxcvodggkw.supabase.co'; 
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''; 
 
-const R2_DOMAIN = 'https://assets.mophsk.online'; // โดเมนใหม่ที่คุณตั้งไว้
+const R2_DOMAIN = process.env.NEXT_PUBLIC_R2_DOMAIN || 'https://assets.mophsk.online';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 

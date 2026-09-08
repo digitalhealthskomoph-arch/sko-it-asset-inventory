@@ -1,13 +1,11 @@
 import { NextResponse } from 'next/server';
 
-const LINE_ACCESS_TOKEN =
-  process.env.LINE_CHANNEL_ACCESS_TOKEN ||
-  'Kxcra7n2EaxDS1182sOkyLlvJ9gcqxp99LaMvOxXSmFVhtyN1p5SEyyOBFSUOQqtlHdTT3n5d1jz6VnRuTxE306pqYVMEKa8/xPd+Yh8MSlzYPObugTI/onsp9dN9hQNbxG9le/0DoMPXT17MQbVDgdB04t89/1O/w1cDnyilFU=';
+const LINE_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN || '';
 
 const ADMIN_LINE_GROUP_ID =
   process.env.ADMIN_LINE_GROUP_ID ||
   process.env.LINE_ADMIN_GROUP_ID ||
-  'C1219a8b54f36b2c6b9fbdf52e5c93a39';
+  '';
 
 export async function POST(req: Request) {
   try {
