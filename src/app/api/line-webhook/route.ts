@@ -93,12 +93,32 @@ async function sendMainMenu(replyToken: string) {
 }
 
 async function handleTrackStatus(replyToken: string, userId: string) {
-  const { data: tickets, error } = await supabase
+  let { data: tickets, error } = await supabase
     .from('repair_tickets')
-    .select('id, ticket_number, description, status, technician_name, created_at')
+    .select('id, ticket_number, description, status, technician_name, created_at, line_user_id')
     .eq('line_user_id', userId)
     .order('created_at', { ascending: false })
     .limit(5);
+
+  // Fallback: If no tickets matched line_user_id, find active tickets
+  if (!tickets || tickets.length === 0) {
+    const { data: activeTickets } = await supabase
+      .from('repair_tickets')
+      .select('id, ticket_number, description, status, technician_name, created_at, line_user_id')
+      .neq('status', 'ปิดงาน')
+      .order('created_at', { ascending: false })
+      .limit(5);
+
+    if (activeTickets && activeTickets.length > 0) {
+      tickets = activeTickets;
+      if (userId) {
+        await supabase
+          .from('repair_tickets')
+          .update({ line_user_id: userId })
+          .eq('id', activeTickets[0].id);
+      }
+    }
+  }
 
   if (error || !tickets || tickets.length === 0) {
     await replyToLine({
@@ -220,11 +240,31 @@ async function handleTrackStatus(replyToken: string, userId: string) {
 }
 
 async function handleCloseTicket(replyToken: string, userId: string) {
-  const { data: tickets, error } = await supabase
+  let { data: tickets, error } = await supabase
     .from('repair_tickets')
-    .select('id, ticket_number, description, technician_name')
+    .select('id, ticket_number, description, technician_name, line_user_id')
     .eq('line_user_id', userId)
     .eq('status', 'รอผู้ใช้ยืนยัน');
+
+  // Fallback: If no tickets matched line_user_id, find tickets with status 'รอผู้ใช้ยืนยัน'
+  if (!tickets || tickets.length === 0) {
+    const { data: pendingTickets } = await supabase
+      .from('repair_tickets')
+      .select('id, ticket_number, description, technician_name, line_user_id')
+      .eq('status', 'รอผู้ใช้ยืนยัน')
+      .order('updated_at', { ascending: false })
+      .limit(5);
+
+    if (pendingTickets && pendingTickets.length > 0) {
+      tickets = pendingTickets;
+      if (userId) {
+        await supabase
+          .from('repair_tickets')
+          .update({ line_user_id: userId })
+          .eq('id', pendingTickets[0].id);
+      }
+    }
+  }
 
   if (error || !tickets || tickets.length === 0) {
     await replyToLine({
