@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { Monitor, Lock, User, Loader2 } from 'lucide-react';
@@ -11,6 +11,15 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    // Intercept LIFF redirects
+    const params = new URLSearchParams(window.location.search);
+    const liffState = params.get('liff.state');
+    if (liffState) {
+      router.replace(liffState);
+    }
+  }, [router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
