@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Loader2, Search, Edit, AlertCircle, Clock, CheckCircle, ListTodo, Image as ImageIcon, X, Star, Trash2 } from 'lucide-react';
+import { Loader2, Search, Edit, AlertCircle, Clock, CheckCircle, ListTodo, Image as ImageIcon, X, Star, Trash2, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 
 type Ticket = {
@@ -18,9 +18,10 @@ type Ticket = {
   rating?: number | null;
   feedback?: string | null;
   closed_at?: string | null;
+  asset_id?: string | null;
   personnel: { first_name: string; last_name: string } | null;
   departments: { name: string } | null;
-  assets: { asset_number: string; brand_model: string } | null;
+  assets: { id?: string; asset_number: string; brand_model: string } | null;
 };
 
 const TECHNICIANS = [
@@ -70,10 +71,10 @@ export default function TicketsPage() {
       .from('repair_tickets')
       .select(`
         id, ticket_number, issue_type, description, status, image_url, created_at, technician_name, resolution_notes,
-        rating, feedback, closed_at,
+        rating, feedback, closed_at, asset_id,
         personnel (first_name, last_name),
         departments (name),
-        assets (asset_number, brand_model)
+        assets (id, asset_number, brand_model)
       `)
       .order('created_at', { ascending: false });
 
@@ -328,10 +329,17 @@ export default function TicketsPage() {
                     </td>
                     <td className="p-4">
                       {ticket.assets ? (
-                        <>
-                          <div className="text-slate-800">{ticket.assets.asset_number}</div>
+                        <Link 
+                          href={`/dashboard/assets/${ticket.assets.id || ticket.asset_id}`}
+                          className="group block"
+                          title="คลิกเพื่อดูข้อมูลและประวัติการซ่อมของครุภัณฑ์นี้"
+                        >
+                          <div className="font-semibold text-blue-600 group-hover:text-blue-700 group-hover:underline flex items-center gap-1">
+                            <span>{ticket.assets.asset_number}</span>
+                            <ExternalLink className="w-3 h-3 text-blue-400 group-hover:text-blue-600 opacity-60 group-hover:opacity-100 transition-opacity" />
+                          </div>
                           <div className="text-xs text-slate-500">{ticket.assets.brand_model}</div>
-                        </>
+                        </Link>
                       ) : (
                         <span className="text-slate-400 italic">- ไม่ระบุ -</span>
                       )}

@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Search, Loader2, Plus, MonitorSmartphone, Filter, Image as ImageIcon } from 'lucide-react';
+import { Search, Loader2, Plus, MonitorSmartphone, Filter, Image as ImageIcon, Wrench, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 export default function AssetListPage() {
   const router = useRouter();
   const [assets, setAssets] = useState<any[]>([]);
+  const [repairCounts, setRepairCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [departments, setDepartments] = useState<any[]>([]);
@@ -16,6 +17,7 @@ export default function AssetListPage() {
   const [selectedDept, setSelectedDept] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
+  const [selectedRepairFilter, setSelectedRepairFilter] = useState('');
 
   useEffect(() => {
     fetchFilters();
@@ -37,18 +39,34 @@ export default function AssetListPage() {
 
   const fetchAssets = async () => {
     try {
-      const { data, error } = await supabase
-        .from('assets')
-        .select(`
-          *,
-          departments (name),
-          personnel (first_name, last_name),
-          asset_categories (name)
-        `)
-        .order('created_at', { ascending: false });
+      const [assetsRes, ticketsRes] = await Promise.all([
+        supabase
+          .from('assets')
+          .select(`
+            *,
+            departments (name),
+            personnel (first_name, last_name),
+            asset_categories (name)
+          `)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('repair_tickets')
+          .select('asset_id')
+          .not('asset_id', 'is', null)
+      ]);
 
-      if (error) throw error;
-      setAssets(data || []);
+      if (ticketsRes.data) {
+        const counts: Record<string, number> = {};
+        ticketsRes.data.forEach((t: any) => {
+          if (t.asset_id) {
+            counts[t.asset_id] = (counts[t.asset_id] || 0) + 1;
+          }
+        });
+        setRepairCounts(counts);
+      }
+
+      if (assetsRes.error) throw assetsRes.error;
+      setAssets(assetsRes.data || []);
     } catch (error) {
       console.error('Error fetching assets:', error);
     } finally {
@@ -66,7 +84,17 @@ export default function AssetListPage() {
     const matchesCat = selectedCategory ? asset.category_id === selectedCategory : true;
     const matchesStatus = selectedStatus ? asset.status === selectedStatus : true;
 
-    return matchesSearch && matchesDept && matchesCat && matchesStatus;
+    const count = repairCounts[asset.id] || 0;
+    let matchesRepair = true;
+    if (selectedRepairFilter === 'repaired') {
+      matchesRepair = count >= 1;
+    } else if (selectedRepairFilter === 'frequent') {
+      matchesRepair = count >= 3 || asset.status === 'เสื่อมสภาพ' || asset.status === 'ชำรุด';
+    } else if (selectedRepairFilter === 'never') {
+      matchesRepair = count === 0;
+    }
+
+    return matchesSearch && matchesDept && matchesCat && matchesStatus && matchesRepair;
   });
 
   return (
@@ -130,6 +158,17 @@ export default function AssetListPage() {
                 <option value="เสื่อมสภาพ">เสื่อมสภาพ</option>
                 <option value="ไม่พบ">ไม่พบ</option>
               </select>
+
+              <select 
+                value={selectedRepairFilter}
+                onChange={(e) => setSelectedRepairFilter(e.target.value)}
+                className="bg-white border border-slate-200 rounded-xl text-sm px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer font-medium"
+              >
+                <option value="">ทุกประวัติซ่อม</option>
+                <option value="repaired">เคยส่งซ่อม (≥ 1 ครั้ง)</option>
+                <option value="frequent">⚠️ ซ่อมบ่อย / เสี่ยงจำหน่าย</option>
+                <option value="never">ไม่เคยมีประวัติซ่อม</option>
+              </select>
             </div>
           </div>
 
@@ -158,6 +197,7 @@ export default function AssetListPage() {
                   <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">ชื่ออุปกรณ์</th>
                   <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">ผู้ครอบครอง</th>
                   <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">กลุ่มงาน</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">ประวัติซ่อม</th>
                   <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">สถานะ</th>
                 </tr>
               </thead>
@@ -208,6 +248,38 @@ export default function AssetListPage() {
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600">
                       {asset.departments?.name || '-'}
+                    </td>
+                    <td className="px-6 py-4">
+                      {(() => {
+                        const count = repairCounts[asset.id] || 0;
+                        if (count >= 4 || asset.status === 'เสื่อมสภาพ' || asset.status === 'ชำรุด') {
+                          return (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200 whitespace-nowrap">
+                              <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
+                              ซ่อม {count} ครั้ง (ควรจำหน่าย)
+                            </span>
+                          );
+                        }
+                        if (count >= 2) {
+                          return (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 whitespace-nowrap">
+                              <Wrench className="w-3.5 h-3.5 text-amber-600" />
+                              ซ่อม {count} ครั้ง (เฝ้าระวัง)
+                            </span>
+                          );
+                        }
+                        if (count === 1) {
+                          return (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 whitespace-nowrap">
+                              <Wrench className="w-3.5 h-3.5 text-blue-600" />
+                              ซ่อม 1 ครั้ง
+                            </span>
+                          );
+                        }
+                        return (
+                          <span className="text-xs text-slate-400 italic">ไม่เคยซ่อม</span>
+                        );
+                      })()}
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${

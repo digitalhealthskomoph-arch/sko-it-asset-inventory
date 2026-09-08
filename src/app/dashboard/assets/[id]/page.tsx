@@ -2,9 +2,31 @@
 
 import { useState, useEffect, useRef, use } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Camera, Save, Loader2, X, Trash2, ArrowLeft, Sparkles } from 'lucide-react';
+import { 
+  Camera, Save, Loader2, X, Trash2, ArrowLeft, Sparkles, 
+  AlertTriangle, AlertCircle, CheckCircle2, Clock, Wrench, 
+  FileText, Star, ExternalLink, Image as ImageIcon 
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+
+function formatDuration(startStr: string, endStr?: string | null): string {
+  if (!endStr) return '-';
+  const diffMs = Math.max(0, new Date(endStr).getTime() - new Date(startStr).getTime());
+  const diffMinutes = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMinutes / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffDays > 0) {
+    const remainHours = diffHours % 24;
+    return `${diffDays} วัน ${remainHours > 0 ? `${remainHours} ชม.` : ''}`.trim();
+  }
+  if (diffHours > 0) {
+    const remainMins = diffMinutes % 60;
+    return `${diffHours} ชม. ${remainMins > 0 ? `${remainMins} นาที` : ''}`.trim();
+  }
+  return `${diffMinutes} นาที`;
+}
 
 export default function EditAssetPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -13,6 +35,7 @@ export default function EditAssetPage({ params }: { params: Promise<{ id: string
   const [departments, setDepartments] = useState<any[]>([]);
   const [personnel, setPersonnel] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
+  const [rawAsset, setRawAsset] = useState<any>(null);
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -52,7 +75,11 @@ export default function EditAssetPage({ params }: { params: Promise<{ id: string
         supabase.from('personnel').select('*').order('first_name'),
         supabase.from('asset_categories').select('*').order('name'),
         supabase.from('assets').select('*').eq('id', id).single(),
-        supabase.from('repair_tickets').select('*').eq('asset_id', id).order('created_at', { ascending: false })
+        supabase.from('repair_tickets').select(`
+          *,
+          personnel (first_name, last_name),
+          departments (name)
+        `).eq('asset_id', id).order('created_at', { ascending: false })
       ]);
 
       if (deptRes.data) setDepartments(deptRes.data);
@@ -62,6 +89,7 @@ export default function EditAssetPage({ params }: { params: Promise<{ id: string
 
       if (assetRes.data) {
         const asset = assetRes.data;
+        setRawAsset(asset);
         setSelectedDept(asset.department_id || '');
         setSelectedPerson(asset.personnel_id || '');
         setAssetNumber(asset.asset_number || '');
@@ -411,45 +439,257 @@ export default function EditAssetPage({ params }: { params: Promise<{ id: string
             </div>
           </div>
 
-          <div className="space-y-4">
-            <h3 className="font-medium text-slate-800 border-b pb-2">4. ประวัติการซ่อม (Repair History)</h3>
-            {repairHistory.length > 0 ? (
-              <div className="border border-slate-200 rounded-xl overflow-hidden">
-                <div className="divide-y divide-slate-100">
-                  {repairHistory.map((ticket) => (
-                    <div key={ticket.id} className="p-4 bg-white flex flex-col sm:flex-row justify-between sm:items-center gap-3">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-bold text-slate-800">{ticket.ticket_number}</span>
-                          <span className={`px-2 py-0.5 rounded text-xs font-medium border ${
-                            ticket.status === 'เสร็จสิ้น' ? 'bg-green-50 text-green-700 border-green-200' :
-                            ticket.status === 'กำลังดำเนินการ' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                            'bg-orange-50 text-orange-700 border-orange-200'
-                          }`}>
-                            {ticket.status}
-                          </span>
-                        </div>
-                        <div className="text-sm text-slate-700 font-medium">{ticket.issue_type}</div>
-                        <div className="text-sm text-slate-500 line-clamp-2 mt-1">{ticket.description}</div>
-                        {ticket.resolution_notes && (
-                          <div className="text-sm text-green-700 mt-2 bg-green-50 p-2 rounded border border-green-100">
-                            <strong>การแก้ไข:</strong> {ticket.resolution_notes}
-                          </div>
-                        )}
-                      </div>
-                      <div className="text-xs text-slate-400 whitespace-nowrap text-left sm:text-right">
-                        <div>แจ้งเมื่อ: {new Date(ticket.created_at).toLocaleDateString('th-TH')}</div>
-                      </div>
-                    </div>
-                  ))}
+          {/* 4. ประวัติการซ่อมและการประเมินสภาพ */}
+          {(() => {
+            const totalRepairs = repairHistory.length;
+            const closedRepairs = repairHistory.filter(t => t.status === 'ปิดงาน').length;
+
+            let ageYears: number | null = null;
+            if (rawAsset?.acquisition_date) {
+              const acqTime = new Date(rawAsset.acquisition_date).getTime();
+              ageYears = Math.floor((Date.now() - acqTime) / (365.25 * 24 * 3600 * 1000));
+            }
+
+            const issueCounts: Record<string, number> = {};
+            repairHistory.forEach(t => {
+              if (t.issue_type) {
+                issueCounts[t.issue_type] = (issueCounts[t.issue_type] || 0) + 1;
+              }
+            });
+            let topIssue = '-';
+            let topIssueCount = 0;
+            Object.entries(issueCounts).forEach(([type, count]) => {
+              if (count > topIssueCount) {
+                topIssue = type;
+                topIssueCount = count;
+              }
+            });
+
+            const reasons: string[] = [];
+            let recommendation: 'normal' | 'warning' | 'critical' = 'normal';
+
+            if (status === 'เสื่อมสภาพ' || status === 'ชำรุด') {
+              recommendation = 'critical';
+              reasons.push(`สถานะของอุปกรณ์ปัจจุบันถูกบันทึกว่า "${status}"`);
+            }
+
+            if (totalRepairs >= 4) {
+              recommendation = 'critical';
+              reasons.push(`ส่งซ่อมสะสมแล้ว ${totalRepairs} ครั้ง (เข้าเกณฑ์ซ่อมแซมซ้ำซาก สิ้นเปลืองงบประมาณตามระเบียบพัสดุ)`);
+            } else if (totalRepairs >= 2) {
+              if (recommendation !== 'critical') recommendation = 'warning';
+              reasons.push(`ส่งซ่อมแล้ว ${totalRepairs} ครั้ง อยู่ในกลุ่มเฝ้าระวังอาการเสียต่อเนื่อง`);
+            }
+
+            if (ageYears !== null && ageYears >= 5) {
+              if (totalRepairs >= 2) {
+                recommendation = 'critical';
+                reasons.push(`อายุการใช้งาน ${ageYears} ปี เกินเกณฑ์มาตรฐาน 5 ปีร่วมกับมีประวัติซ่อม`);
+              } else {
+                if (recommendation !== 'critical') recommendation = 'warning';
+                reasons.push(`อายุการใช้งาน ${ageYears} ปี เกินเกณฑ์มาตรฐานคอมพิวเตอร์และอุปกรณ์ไอที (5 ปี)`);
+              }
+            }
+
+            if (reasons.length === 0) {
+              reasons.push('อุปกรณ์อยู่ในสภาพปกติ ประวัติการซ่อมต่ำ และยังอยู่ในอายุการใช้งานตามเกณฑ์');
+            }
+
+            return (
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b pb-2 gap-2">
+                  <div>
+                    <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                      <Wrench className="w-5 h-5 text-blue-600" />
+                      4. ประวัติการซ่อมและการประเมินสภาพ (Repair History & Assessment)
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      วิเคราะห์ความคุ้มค่า ความถี่ในการซ่อม และเกณฑ์การพิจารณาแทงจำหน่ายพัสดุ
+                    </p>
+                  </div>
+                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 w-fit">
+                    ประวัติซ่อม {totalRepairs} ครั้ง
+                  </span>
                 </div>
+
+                {/* Smart Assessment Banner */}
+                <div className={`p-4 rounded-xl border ${
+                  recommendation === 'critical'
+                    ? 'bg-rose-50/90 border-rose-200 text-rose-900'
+                    : recommendation === 'warning'
+                    ? 'bg-amber-50/90 border-amber-200 text-amber-900'
+                    : 'bg-emerald-50/90 border-emerald-200 text-emerald-900'
+                }`}>
+                  <div className="flex items-start gap-3">
+                    <div className={`p-2 rounded-lg mt-0.5 ${
+                      recommendation === 'critical'
+                        ? 'bg-rose-100 text-rose-700'
+                        : recommendation === 'warning'
+                        ? 'bg-amber-100 text-amber-700'
+                        : 'bg-emerald-100 text-emerald-700'
+                    }`}>
+                      {recommendation === 'critical' ? (
+                        <AlertTriangle className="w-5 h-5" />
+                      ) : recommendation === 'warning' ? (
+                        <AlertCircle className="w-5 h-5" />
+                      ) : (
+                        <CheckCircle2 className="w-5 h-5" />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-bold text-sm">
+                          {recommendation === 'critical'
+                            ? 'ข้อเสนอแนะ: แนะนำพิจารณาแทงจำหน่าย (Decommission / Write-off)'
+                            : recommendation === 'warning'
+                            ? 'ข้อเสนอแนะ: อยู่ในกลุ่มเฝ้าระวัง (Watchlist)'
+                            : 'ข้อเสนอแนะ: สภาพพร้อมใช้งานปกติ (Good Condition)'}
+                        </span>
+                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${
+                          recommendation === 'critical'
+                            ? 'bg-rose-100 border-rose-300 text-rose-800'
+                            : recommendation === 'warning'
+                            ? 'bg-amber-100 border-amber-300 text-amber-800'
+                            : 'bg-emerald-100 border-emerald-300 text-emerald-800'
+                        }`}>
+                          {recommendation === 'critical' ? 'ควรจำหน่าย' : recommendation === 'warning' ? 'เฝ้าระวัง' : 'ปกติ'}
+                        </span>
+                      </div>
+                      <ul className="mt-2 space-y-1 text-xs">
+                        {reasons.map((r, idx) => (
+                          <li key={idx} className="flex items-start gap-1.5 opacity-90">
+                            <span className="font-bold">•</span>
+                            <span>{r}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4 KPI Cards */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                    <div className="text-xs text-slate-500 font-medium">ส่งซ่อมสะสม</div>
+                    <div className="text-xl font-bold text-slate-800 mt-1">{totalRepairs} ครั้ง</div>
+                  </div>
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                    <div className="text-xs text-slate-500 font-medium">ปิดงานสำเร็จ</div>
+                    <div className="text-xl font-bold text-emerald-700 mt-1">{closedRepairs} / {totalRepairs}</div>
+                  </div>
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                    <div className="text-xs text-slate-500 font-medium">ปัญหาที่พบบ่อยสุด</div>
+                    <div className="text-sm font-bold text-slate-800 mt-1 truncate" title={topIssue}>
+                      {topIssueCount > 0 ? `${topIssue} (${topIssueCount})` : '-'}
+                    </div>
+                  </div>
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                    <div className="text-xs text-slate-500 font-medium">อายุการใช้งาน</div>
+                    <div className="text-sm font-bold text-slate-800 mt-1">
+                      {ageYears !== null ? `${ageYears} ปี` : rawAsset?.service_life || 'ไม่ระบุ'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Detailed Repair Tickets Timeline */}
+                {repairHistory.length > 0 ? (
+                  <div className="space-y-3 pt-2">
+                    <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      ไทม์ไลน์บันทึกการซ่อม ({repairHistory.length} รายการ)
+                    </h4>
+                    <div className="border border-slate-200 rounded-xl divide-y divide-slate-100 overflow-hidden bg-white shadow-sm">
+                      {repairHistory.map((ticket) => (
+                        <div key={ticket.id} className="p-4 hover:bg-slate-50/60 transition-colors">
+                          <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-2">
+                            <div className="space-y-1.5 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="font-bold text-slate-900 text-sm">{ticket.ticket_number}</span>
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${
+                                  ticket.status === 'ปิดงาน' ? 'bg-green-50 text-green-700 border-green-200' :
+                                  ticket.status === 'รอผู้ใช้ยืนยัน' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                  ticket.status === 'กำลังดำเนินการ' ? 'bg-purple-50 text-purple-700 border-purple-200' :
+                                  'bg-orange-50 text-orange-700 border-orange-200'
+                                }`}>
+                                  {ticket.status}
+                                </span>
+                                <span className="px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-600 font-medium">
+                                  {ticket.issue_type}
+                                </span>
+                              </div>
+
+                              <div className="text-xs text-slate-500 flex items-center gap-2">
+                                <span>ผู้แจ้ง: <strong>{ticket.personnel ? `${ticket.personnel.first_name} ${ticket.personnel.last_name}` : 'ไม่ระบุ'}</strong></span>
+                                {ticket.departments?.name && <span>• {ticket.departments.name}</span>}
+                              </div>
+
+                              <div className="text-sm text-slate-700 bg-slate-50 p-2.5 rounded-lg border border-slate-200/70">
+                                {ticket.description}
+                              </div>
+
+                              {ticket.image_url && (
+                                <a 
+                                  href={ticket.image_url} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer" 
+                                  className="inline-flex items-center text-xs text-blue-600 hover:underline font-medium"
+                                >
+                                  <ImageIcon className="w-3.5 h-3.5 mr-1" />
+                                  ดูภาพถ่ายอาการชำรุด
+                                </a>
+                              )}
+
+                              {ticket.resolution_notes && (
+                                <div className="bg-emerald-50 p-2.5 rounded-lg border border-emerald-200 text-xs text-emerald-900">
+                                  <strong className="text-emerald-950 font-semibold">{ticket.technician_name ? `ช่าง ${ticket.technician_name}` : 'การแก้ไข'}:</strong> {ticket.resolution_notes}
+                                </div>
+                              )}
+
+                              {ticket.status === 'ปิดงาน' && (ticket.rating || ticket.feedback) && (
+                                <div className="bg-amber-50 p-2.5 rounded-lg border border-amber-200 text-xs space-y-1">
+                                  <div className="flex items-center gap-1.5 font-semibold text-amber-900">
+                                    <span>คะแนนประเมิน:</span>
+                                    <div className="flex text-amber-400">
+                                      {[1, 2, 3, 4, 5].map((s) => (
+                                        <Star
+                                          key={s}
+                                          className={`w-3.5 h-3.5 ${s <= (ticket.rating || 0) ? 'fill-amber-400 text-amber-400' : 'text-slate-200'}`}
+                                        />
+                                      ))}
+                                    </div>
+                                    <span className="text-amber-800 font-bold">({ticket.rating}/5 ดาว)</span>
+                                  </div>
+                                  {ticket.feedback && (
+                                    <p className="text-slate-700 italic bg-white/80 p-1.5 rounded border border-amber-100">
+                                      "{ticket.feedback}"
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="text-xs text-slate-400 whitespace-nowrap text-left sm:text-right space-y-1 pt-1">
+                              <div>แจ้งเมื่อ: {new Date(ticket.created_at).toLocaleDateString('th-TH', { hour: '2-digit', minute: '2-digit' })}</div>
+                              {ticket.closed_at && (
+                                <div className="text-emerald-600 font-medium flex items-center sm:justify-end gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  ใช้เวลา: {formatDuration(ticket.created_at, ticket.closed_at)}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-8 text-center text-sm text-slate-500">
+                    <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
+                    ไม่พบประวัติการซ่อมสำหรับอุปกรณ์นี้ (อุปกรณ์ยังไม่เคยถูกส่งซ่อม)
+                  </div>
+                )}
               </div>
-            ) : (
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-center text-sm text-slate-500">
-                ยังไม่มีประวัติการซ่อมสำหรับอุปกรณ์นี้
-              </div>
-            )}
-          </div>
+            );
+          })()}
 
           <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-200 lg:static lg:bg-transparent lg:border-none lg:p-0 z-10 shadow-[0_-4px_6px_-1px_rgb(0,0,0,0.05)] lg:shadow-none flex gap-3">
             <button type="submit" disabled={saving || deleting} className="flex-1 flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-xl transition-colors disabled:opacity-70">
