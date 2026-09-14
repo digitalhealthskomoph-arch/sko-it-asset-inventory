@@ -1,10 +1,16 @@
 import { NextResponse } from 'next/server';
 
-const LINE_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN || '';
+const LINE_ACCESS_TOKEN =
+  process.env.LINE_CHANNEL_ACCESS_TOKEN ||
+  process.env.LINE_ACCESS_TOKEN ||
+  process.env.CHANNEL_ACCESS_TOKEN ||
+  '';
 
 const ADMIN_LINE_GROUP_ID =
   process.env.ADMIN_LINE_GROUP_ID ||
   process.env.LINE_ADMIN_GROUP_ID ||
+  process.env.LINE_GROUP_ID ||
+  process.env.GROUP_ID ||
   '';
 
 export async function POST(req: Request) {
@@ -22,6 +28,18 @@ export async function POST(req: Request) {
 
     if (!ticketNumber) {
       return NextResponse.json({ error: 'Missing ticketNumber' }, { status: 400 });
+    }
+
+    if (!LINE_ACCESS_TOKEN || !ADMIN_LINE_GROUP_ID) {
+      console.error('Missing LINE credentials in environment variables:', {
+        hasToken: !!LINE_ACCESS_TOKEN,
+        hasGroupId: !!ADMIN_LINE_GROUP_ID,
+      });
+      return NextResponse.json({
+        error: 'Missing LINE_CHANNEL_ACCESS_TOKEN or ADMIN_LINE_GROUP_ID in Vercel environment variables',
+        hasToken: !!LINE_ACCESS_TOKEN,
+        hasGroupId: !!ADMIN_LINE_GROUP_ID,
+      }, { status: 500 });
     }
 
     const now = new Date();
@@ -176,7 +194,7 @@ export async function POST(req: Request) {
         (imageUrl ? `📷 รูปภาพ: ${imageUrl}\n` : '') +
         `\n🖥️ จัดการงาน: https://sko-it-asset-inventory.vercel.app/dashboard/tickets`;
 
-      await fetch('https://api.line.me/v2/bot/message/push', {
+      const fallbackRes = await fetch('https://api.line.me/v2/bot/message/push', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -187,6 +205,16 @@ export async function POST(req: Request) {
           messages: [{ type: 'text', text: fallbackText }],
         }),
       });
+
+      if (!fallbackRes.ok) {
+        const fallbackErr = await fallbackRes.text();
+        console.error('LINE push fallback failed:', fallbackErr);
+        return NextResponse.json({
+          error: 'Failed to push message to LINE group',
+          flexError: errText,
+          fallbackError: fallbackErr,
+        }, { status: 500 });
+      }
     }
 
     return NextResponse.json({ success: true });

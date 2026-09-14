@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
-const LINE_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN || '';
+const LINE_ACCESS_TOKEN =
+  process.env.LINE_CHANNEL_ACCESS_TOKEN ||
+  process.env.LINE_ACCESS_TOKEN ||
+  process.env.CHANNEL_ACCESS_TOKEN ||
+  '';
 // Endpoint URL = https://sko-it-asset-inventory.vercel.app/liff
 // So LIFF sub-paths become: /liff.line.me/ID/repair → /liff/repair
 const LIFF_BASE = 'https://liff.line.me/2008591648-wGRKxePd';
