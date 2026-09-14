@@ -123,7 +123,7 @@ export default function AssetListPage() {
                 placeholder="ค้นหาชื่อ, รหัส, ยี่ห้อ, หรือผู้ใช้งาน..." 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                className="w-full pl-10 pr-4 py-2 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
               />
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             </div>
@@ -132,7 +132,7 @@ export default function AssetListPage() {
               <select 
                 value={selectedDept}
                 onChange={(e) => setSelectedDept(e.target.value)}
-                className="bg-white border border-slate-200 rounded-xl text-sm px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                className="bg-white border border-slate-300 rounded-xl text-sm text-slate-900 font-medium px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
               >
                 <option value="">ทุกกลุ่มงาน</option>
                 {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
@@ -141,7 +141,7 @@ export default function AssetListPage() {
               <select 
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="bg-white border border-slate-200 rounded-xl text-sm px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                className="bg-white border border-slate-300 rounded-xl text-sm text-slate-900 font-medium px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
               >
                 <option value="">ทุกประเภท</option>
                 {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -150,7 +150,7 @@ export default function AssetListPage() {
               <select 
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
-                className="bg-white border border-slate-200 rounded-xl text-sm px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                className="bg-white border border-slate-300 rounded-xl text-sm text-slate-900 font-medium px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
               >
                 <option value="">ทุกสถานะ</option>
                 <option value="ใช้งาน">ใช้งาน</option>
@@ -162,7 +162,7 @@ export default function AssetListPage() {
               <select 
                 value={selectedRepairFilter}
                 onChange={(e) => setSelectedRepairFilter(e.target.value)}
-                className="bg-white border border-slate-200 rounded-xl text-sm px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer font-medium"
+                className="bg-white border border-slate-300 rounded-xl text-sm text-slate-900 font-medium px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
               >
                 <option value="">ทุกประวัติซ่อม</option>
                 <option value="repaired">เคยส่งซ่อม (≥ 1 ครั้ง)</option>

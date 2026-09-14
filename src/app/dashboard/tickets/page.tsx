@@ -243,7 +243,7 @@ export default function TicketsPage() {
             placeholder="ค้นหาเลขที่, ชื่อ, อาการ..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-slate-900 bg-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <Search className="w-5 h-5 text-slate-400 absolute left-3 top-2.5" />
         </div>
@@ -421,7 +421,7 @@ export default function TicketsPage() {
                         <select
                           value={ticket.technician_name || ''}
                           onChange={(e) => handleAssignTechnician(ticket.id, e.target.value)}
-                          className="text-xs border border-slate-200 rounded-lg p-1.5 bg-white outline-none focus:ring-1 focus:ring-blue-500 w-full min-w-[130px]"
+                          className="text-xs border border-slate-300 rounded-lg p-1.5 bg-white text-slate-900 font-medium outline-none focus:ring-1 focus:ring-blue-500 w-full min-w-[130px]"
                         >
                           <option value="">-- มอบหมายช่าง --</option>
                           {TECHNICIANS.map(tech => (
@@ -449,7 +449,7 @@ export default function TicketsPage() {
                             <select
                               value={ticket.status}
                               onChange={(e) => handleUpdateStatus(ticket.id, e.target.value)}
-                              className="text-xs border border-slate-200 rounded p-1.5 bg-white outline-none focus:ring-1 focus:ring-blue-500"
+                              className="text-xs border border-slate-300 rounded p-1.5 bg-white text-slate-900 font-medium outline-none focus:ring-1 focus:ring-blue-500"
                             >
                               <option value="รอรับเรื่อง">รอรับเรื่อง</option>
                               <option value="กำลังดำเนินการ">กำลังดำเนินการ</option>
@@ -502,7 +502,7 @@ export default function TicketsPage() {
                 <select 
                   value={technicianName}
                   onChange={(e) => setTechnicianName(e.target.value)}
-                  className="w-full p-2.5 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full p-2.5 border border-slate-300 rounded-lg text-slate-900 bg-white outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   {TECHNICIANS.map(tech => (
                     <option key={tech} value={tech}>{tech}</option>
@@ -515,7 +515,7 @@ export default function TicketsPage() {
                   value={resolutionNotes}
                   onChange={(e) => setResolutionNotes(e.target.value)}
                   rows={3}
-                  className="w-full p-2.5 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  className="w-full p-2.5 border border-slate-300 rounded-lg text-slate-900 bg-white placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                   placeholder="อธิบายว่าซ่อมหรือแก้ไขอย่างไร..."
                 />
               </div>

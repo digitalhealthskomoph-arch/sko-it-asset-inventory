@@ -256,7 +256,7 @@ export default function StatusTrackingPage() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="ค้นหาด้วยรหัส (เช่น 697552) หรืออาการ"
-              className="flex-1 p-3 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-sm shadow-sm"
+              className="flex-1 p-3 bg-white border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm"
             />
             <button
               type="submit"

@@ -265,7 +265,7 @@ export default function RepairFormPage() {
             required 
             value={selectedDept} 
             onChange={e => setSelectedDept(e.target.value)}
-            className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-slate-900 outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">-- เลือกกลุ่มงาน --</option>
             {departments.map(d => (
@@ -281,7 +281,7 @@ export default function RepairFormPage() {
             disabled={!selectedDept}
             value={selectedPersonnel} 
             onChange={e => setSelectedPersonnel(e.target.value)}
-            className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+            className="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-slate-900 outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:bg-slate-100"
           >
             <option value="">-- เลือกชื่อบุคลากร --</option>
             {personnel.map(p => (
@@ -299,7 +299,7 @@ export default function RepairFormPage() {
               setSelectedCategory(e.target.value);
               setSelectedAsset(''); // reset asset when category changes
             }}
-            className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+            className="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-slate-900 outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:bg-slate-100"
           >
             <option value="">-- อุปกรณ์ทั้งหมด --</option>
             {categories
@@ -317,7 +317,7 @@ export default function RepairFormPage() {
             disabled={!selectedPersonnel}
             value={selectedAsset} 
             onChange={e => setSelectedAsset(e.target.value)}
-            className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+            className="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-slate-900 outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:bg-slate-100"
           >
             <option value="">-- ไม่ระบุอุปกรณ์ / อื่นๆ --</option>
             {filteredAssets.map(a => (
@@ -331,7 +331,7 @@ export default function RepairFormPage() {
           <select 
             value={issueType} 
             onChange={e => setIssueType(e.target.value)}
-            className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-slate-900 outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="Hardware">Hardware (เครื่องคอม, ปริ้นเตอร์)</option>
             <option value="Software">Software (โปรแกรม, ไวรัส)</option>
@@ -369,7 +369,7 @@ export default function RepairFormPage() {
             value={description}
             onChange={e => setDescription(e.target.value)}
             placeholder="อธิบายอาการเสียที่พบ..."
-            className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            className="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-blue-500 resize-none"
           />
         </div>
 

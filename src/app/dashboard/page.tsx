@@ -118,7 +118,7 @@ export default function DashboardPage() {
           <select 
             value={selectedDept}
             onChange={(e) => setSelectedDept(e.target.value)}
-            className="bg-transparent text-sm px-3 py-2 outline-none cursor-pointer text-slate-700"
+            className="bg-transparent text-sm px-3 py-2 outline-none cursor-pointer text-slate-900 font-medium"
           >
             <option value="">ทุกกลุ่มงาน</option>
             {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
@@ -127,7 +127,7 @@ export default function DashboardPage() {
           <select 
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            className="bg-transparent text-sm px-3 py-2 outline-none cursor-pointer text-slate-700 sm:border-l border-slate-100"
+            className="bg-transparent text-sm px-3 py-2 outline-none cursor-pointer text-slate-900 font-medium sm:border-l border-slate-100"
           >
             <option value="">ทุกประเภท</option>
             {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}

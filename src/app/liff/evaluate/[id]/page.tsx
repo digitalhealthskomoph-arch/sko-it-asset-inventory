@@ -154,7 +154,7 @@ export default function EvaluatePage() {
               rows={3}
               value={feedback}
               onChange={e => setFeedback(e.target.value)}
-              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 resize-none text-sm"
+              className="w-full p-3 bg-white border border-slate-300 rounded-xl text-slate-900 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-blue-500 resize-none text-sm"
               placeholder="พิมพ์ข้อเสนอแนะ..."
             />
           </div>
