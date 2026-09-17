@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { Search, Loader2, Plus, MonitorSmartphone, Filter, Image as ImageIcon, Wrench, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { getSafeImageUrl } from '@/lib/image-url';
 
 export default function AssetListPage() {
   const router = useRouter();
@@ -213,11 +214,11 @@ export default function AssetListPage() {
                         <div className="relative group/img">
                           <div className="w-10 h-10 rounded-lg overflow-hidden border border-slate-200 bg-white">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={asset.photo_url} alt="Asset" className="w-full h-full object-cover" />
+                            <img src={getSafeImageUrl(asset.photo_url)} alt="Asset" className="w-full h-full object-cover" />
                           </div>
                           <div className="absolute left-12 top-1/2 -translate-y-1/2 hidden group-hover/img:block z-[60] shadow-2xl border border-slate-200 rounded-xl overflow-hidden bg-white">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={asset.photo_url} alt="Asset Preview" className="w-64 h-64 object-cover" />
+                            <img src={getSafeImageUrl(asset.photo_url)} alt="Asset Preview" className="w-64 h-64 object-cover" />
                           </div>
                         </div>
                       ) : (

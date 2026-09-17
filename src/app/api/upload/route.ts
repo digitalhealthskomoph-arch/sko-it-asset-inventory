@@ -28,7 +28,8 @@ export async function POST(request: Request) {
     // สร้าง URL สำหรับให้หน้าบ้านใช้อัปโหลดไฟล์โดยตรง (หมดอายุใน 5 นาที)
     const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 300 });
 
-    const publicUrl = `${process.env.NEXT_PUBLIC_R2_DOMAIN}/${filename}`;
+    const r2Domain = process.env.NEXT_PUBLIC_R2_DOMAIN || 'https://pub-0645b35588f444db916ede067d20d7e2.r2.dev';
+    const publicUrl = `${r2Domain}/${filename}`;
 
     return NextResponse.json({ presignedUrl, publicUrl });
   } catch (error) {

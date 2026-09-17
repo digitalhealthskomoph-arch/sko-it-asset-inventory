@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Loader2, Search, Edit, AlertCircle, Clock, CheckCircle, ListTodo, Image as ImageIcon, X, Star, Trash2, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
+import { getSafeImageUrl } from '@/lib/image-url';
 
 type Ticket = {
   id: string;
@@ -365,7 +366,7 @@ export default function TicketsPage() {
                       </div>
                       <div className="text-slate-700 line-clamp-2 mb-1">{ticket.description}</div>
                       {ticket.image_url && (
-                        <a href={ticket.image_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-xs text-blue-600 hover:underline mt-1">
+                        <a href={getSafeImageUrl(ticket.image_url)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-xs text-blue-600 hover:underline mt-1">
                           <ImageIcon className="w-3 h-3 mr-1" />
                           ดูรูปภาพ
                         </a>

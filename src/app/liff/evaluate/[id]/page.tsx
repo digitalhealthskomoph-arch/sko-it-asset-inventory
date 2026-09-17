@@ -45,21 +45,28 @@ export default function EvaluatePage() {
     if (rating === 0) return alert('กรุณาให้คะแนนความพึงพอใจ');
     
     setSubmitting(true);
-    const { error } = await supabase
-      .from('repair_tickets')
-      .update({
-        status: 'ปิดงาน',
-        rating: rating,
-        feedback: feedback,
-        closed_at: new Date().toISOString()
-      })
-      .eq('id', id);
+    try {
+      const res = await fetch('/api/tickets/evaluate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ticketId: id,
+          rating,
+          feedback,
+        }),
+      });
 
-    setSubmitting(false);
-    if (!error) {
-      setSuccess(true);
-    } else {
-      alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+      const result = await res.json();
+      if (res.ok && result.success) {
+        setSuccess(true);
+      } else {
+        alert(result.error || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('เกิดข้อผิดพลาดในการเชื่อมต่อเครือข่าย');
+    } finally {
+      setSubmitting(false);
     }
   };
 

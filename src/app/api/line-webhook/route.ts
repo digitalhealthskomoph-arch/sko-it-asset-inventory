@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin as supabase } from '@/lib/supabase-admin';
 
 const LINE_ACCESS_TOKEN =
   process.env.LINE_CHANNEL_ACCESS_TOKEN ||

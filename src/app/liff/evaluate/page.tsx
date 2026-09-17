@@ -49,7 +49,11 @@ function EvaluateContent() {
       .select('*, personnel(first_name, last_name)')
       .eq('id', id)
       .single();
-    if (data) setTicket(data);
+    if (data) {
+      setTicket(data);
+      if (data.rating) setRating(data.rating);
+      if (data.feedback) setFeedback(data.feedback);
+    }
     setLoading(false);
   };
 
@@ -62,13 +66,29 @@ function EvaluateContent() {
     }
 
     setSubmitting(true);
-    const { error } = await supabase
-      .from('repair_tickets')
-      .update({ status: 'ปิดงาน', rating, feedback, closed_at: new Date().toISOString() })
-      .eq('id', ticketId);
-    setSubmitting(false);
-    if (!error) setSuccess(true);
-    else alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+    try {
+      const res = await fetch('/api/tickets/evaluate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ticketId,
+          rating,
+          feedback,
+        }),
+      });
+
+      const result = await res.json();
+      if (res.ok && result.success) {
+        setSuccess(true);
+      } else {
+        alert(result.error || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('เกิดข้อผิดพลาดในการเชื่อมต่อเครือข่าย');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (loading) {

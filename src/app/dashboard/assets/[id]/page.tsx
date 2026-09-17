@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { getSafeImageUrl } from '@/lib/image-url';
 
 function formatDuration(startStr: string, endStr?: string | null): string {
   if (!endStr) return '-';
@@ -290,7 +291,7 @@ export default function EditAssetPage({ params }: { params: Promise<{ id: string
     return <div className="flex justify-center p-8"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>;
   }
 
-  const currentImageDisplay = imagePreview || existingPhotoUrl;
+  const currentImageDisplay = imagePreview || getSafeImageUrl(existingPhotoUrl);
 
   return (
     <div className="max-w-2xl mx-auto pb-20">
