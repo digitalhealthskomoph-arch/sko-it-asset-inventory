@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getSafeImageUrl } from '@/lib/image-url';
 
 const LINE_ACCESS_TOKEN =
   process.env.LINE_CHANNEL_ACCESS_TOKEN ||
@@ -53,77 +54,90 @@ export async function POST(req: Request) {
     });
 
     // 1. Prepare Flex Message
+    const safeImageUrl = getSafeImageUrl(imageUrl);
+
     const flexContents: any = {
       type: 'bubble',
       header: {
         type: 'box',
         layout: 'vertical',
+        backgroundColor: '#1E293B',
+        paddingAll: '15px',
         contents: [
-          { type: 'text', text: '📣 มีรายการแจ้งซ่อมใหม่', weight: 'bold', size: 'lg', color: '#ffffff' },
-          { type: 'text', text: `รหัส: ${ticketNumber}`, size: 'xs', color: '#fecaca', margin: 'xs' }
-        ],
-        backgroundColor: '#dc2626'
+          {
+            type: 'text',
+            text: '🔔 มีการแจ้งซ่อมใหม่ (IT Helpdesk)',
+            weight: 'bold',
+            color: '#38BDF8',
+            size: 'sm'
+          },
+          {
+            type: 'text',
+            text: `ใบงานเลขที่: ${ticketNumber}`,
+            weight: 'bold',
+            color: '#FFFFFF',
+            size: 'lg',
+            margin: 'xs'
+          }
+        ]
       },
       body: {
         type: 'box',
         layout: 'vertical',
         spacing: 'sm',
+        paddingAll: '15px',
         contents: [
           {
             type: 'box',
-            layout: 'baseline',
-            spacing: 'sm',
+            layout: 'horizontal',
             contents: [
-              { type: 'text', text: 'ผู้แจ้ง:', color: '#64748b', size: 'sm', flex: 2 },
-              { type: 'text', text: requesterName || '-', weight: 'bold', color: '#1e293b', size: 'sm', flex: 5, wrap: true }
+              { type: 'text', text: 'ผู้แจ้ง:', size: 'sm', color: '#64748B', flex: 2 },
+              { type: 'text', text: requesterName || '-', size: 'sm', color: '#334155', weight: 'bold', flex: 5, wrap: true }
             ]
           },
           {
             type: 'box',
-            layout: 'baseline',
-            spacing: 'sm',
+            layout: 'horizontal',
             contents: [
-              { type: 'text', text: 'กลุ่มงาน:', color: '#64748b', size: 'sm', flex: 2 },
-              { type: 'text', text: department || '-', color: '#1e293b', size: 'sm', flex: 5, wrap: true }
+              { type: 'text', text: 'กลุ่มงาน:', size: 'sm', color: '#64748B', flex: 2 },
+              { type: 'text', text: department || '-', size: 'sm', color: '#334155', flex: 5, wrap: true }
             ]
           },
           {
             type: 'box',
-            layout: 'baseline',
-            spacing: 'sm',
+            layout: 'horizontal',
             contents: [
-              { type: 'text', text: 'ปัญหา:', color: '#64748b', size: 'sm', flex: 2 },
-              { type: 'text', text: issueType || '-', color: '#2563eb', weight: 'bold', size: 'sm', flex: 5 }
+              { type: 'text', text: 'ปัญหา:', size: 'sm', color: '#64748B', flex: 2 },
+              { type: 'text', text: issueType || '-', size: 'sm', color: '#EF4444', weight: 'bold', flex: 5 }
             ]
           },
           ...(assetInfo ? [{
             type: 'box',
-            layout: 'baseline',
-            spacing: 'sm',
+            layout: 'horizontal',
             contents: [
-              { type: 'text', text: 'อุปกรณ์:', color: '#64748b', size: 'sm', flex: 2 },
-              { type: 'text', text: assetInfo, color: '#1e293b', size: 'sm', flex: 5, wrap: true }
+              { type: 'text', text: 'อุปกรณ์:', size: 'sm', color: '#64748B', flex: 2 },
+              { type: 'text', text: assetInfo, size: 'sm', color: '#334155', flex: 5, wrap: true }
             ]
           }] : []),
           {
             type: 'box',
             layout: 'vertical',
             margin: 'md',
-            backgroundColor: '#f8fafc',
-            paddingAll: 'md',
+            backgroundColor: '#F8FAFC',
+            paddingAll: '10px',
             cornerRadius: 'md',
             contents: [
-              { type: 'text', text: 'รายละเอียดอาการเสีย:', color: '#64748b', size: 'xs' },
-              { type: 'text', text: description || '-', color: '#0f172a', size: 'sm', wrap: true, margin: 'xs' }
+              { type: 'text', text: 'รายละเอียดอาการ:', size: 'xs', color: '#64748B' },
+              { type: 'text', text: description || '-', size: 'sm', color: '#0F172A', wrap: true, margin: 'xs' }
             ]
           },
           {
             type: 'text',
-            text: `📅 ${thaiDateStr}`,
-            color: '#94a3b8',
-            size: 'xxs',
+            text: `เวลาแจ้ง: ${thaiDateStr}`,
+            size: 'xs',
+            color: '#94A3B8',
             align: 'end',
-            margin: 'sm'
+            margin: 'md'
           }
         ]
       },
@@ -131,11 +145,12 @@ export async function POST(req: Request) {
         type: 'box',
         layout: 'vertical',
         spacing: 'sm',
+        paddingAll: '15px',
         contents: [
           {
             type: 'button',
             style: 'primary',
-            color: '#2563eb',
+            color: '#0284C7',
             height: 'sm',
             action: {
               type: 'uri',
@@ -143,14 +158,14 @@ export async function POST(req: Request) {
               uri: 'https://sko-it-asset-inventory.vercel.app/dashboard/tickets'
             }
           },
-          ...(imageUrl ? [{
+          ...(safeImageUrl ? [{
             type: 'button',
             style: 'secondary',
             height: 'sm',
             action: {
               type: 'uri',
               label: '🖼️ ดูรูปภาพประกอบ',
-              uri: imageUrl
+              uri: safeImageUrl
             }
           }] : [])
         ]
@@ -191,7 +206,7 @@ export async function POST(req: Request) {
         (assetInfo ? `💻 อุปกรณ์: ${assetInfo}\n` : '') +
         `📝 รายละเอียด: ${description || '-'}\n` +
         `📅 เวลา: ${thaiDateStr}\n` +
-        (imageUrl ? `📷 รูปภาพ: ${imageUrl}\n` : '') +
+        (safeImageUrl ? `📷 รูปภาพ: ${safeImageUrl}\n` : '') +
         `\n🖥️ จัดการงาน: https://sko-it-asset-inventory.vercel.app/dashboard/tickets`;
 
       const fallbackRes = await fetch('https://api.line.me/v2/bot/message/push', {

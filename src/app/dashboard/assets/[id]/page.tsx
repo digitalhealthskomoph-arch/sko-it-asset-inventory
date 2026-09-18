@@ -629,7 +629,7 @@ export default function EditAssetPage({ params }: { params: Promise<{ id: string
 
                               {ticket.image_url && (
                                 <a 
-                                  href={ticket.image_url} 
+                                  href={getSafeImageUrl(ticket.image_url)} 
                                   target="_blank" 
                                   rel="noopener noreferrer" 
                                   className="inline-flex items-center text-xs text-blue-600 hover:underline font-medium"

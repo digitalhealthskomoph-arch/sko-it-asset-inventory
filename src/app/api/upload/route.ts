@@ -28,7 +28,10 @@ export async function POST(request: Request) {
     // สร้าง URL สำหรับให้หน้าบ้านใช้อัปโหลดไฟล์โดยตรง (หมดอายุใน 5 นาที)
     const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 300 });
 
-    const r2Domain = process.env.NEXT_PUBLIC_R2_DOMAIN || 'https://pub-0645b35588f444db916ede067d20d7e2.r2.dev';
+    const rawDomain = process.env.NEXT_PUBLIC_R2_DOMAIN || '';
+    const r2Domain = (rawDomain && !rawDomain.includes('assets.mophsk.online'))
+      ? rawDomain
+      : 'https://pub-0645b35588f444db916ede067d20d7e2.r2.dev';
     const publicUrl = `${r2Domain}/${filename}`;
 
     return NextResponse.json({ presignedUrl, publicUrl });
