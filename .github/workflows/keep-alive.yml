@@ -1,0 +1,63 @@
+name: Supabase Keep-Alive Cron
+
+on:
+  schedule:
+    # Runs every 2 days at 04:00 UTC (11:00 AM Thailand time)
+    # Supabase free tier pauses after 7 days of inactivity
+    - cron: '0 4 */2 * *'
+  workflow_dispatch:
+    # Allows manual trigger anytime from the Actions tab in GitHub
+
+jobs:
+  keep-alive:
+    name: Ping Supabase & Web App
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Vercel Keep-Alive API
+        id: ping_app
+        run: |
+          echo "=== Pinging Next.js Keep-Alive Endpoint ==="
+          APP_URL="https://sko-it-asset-inventory.vercel.app/api/cron/keep-alive"
+          
+          RESPONSE=$(curl -s -w "\n%{http_code}" --max-time 30 "$APP_URL")
+          HTTP_BODY=$(echo "$RESPONSE" | sed '$d')
+          HTTP_STATUS=$(echo "$RESPONSE" | tail -n 1)
+          
+          echo "HTTP Status Code: $HTTP_STATUS"
+          echo "Response Body: $HTTP_BODY"
+          
+          if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
+            echo "✅ Vercel Keep-Alive API pinged successfully!"
+          else
+            echo "⚠️ Vercel API returned status $HTTP_STATUS. Proceeding to direct Supabase ping."
+          fi
+
+      - name: Direct Supabase REST API Query (Backup)
+        id: ping_supabase
+        run: |
+          echo "=== Pinging Supabase REST API directly ==="
+          SUPABASE_URL="https://jxvnpqxvbnyxcvodggkw.supabase.co"
+          SUPABASE_KEY="${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_avrMiGyieFTbqkFnm7hEag_r_ILx5Sy' }}"
+          
+          RESPONSE=$(curl -s -w "\n%{http_code}" --max-time 30 \
+            -X GET "$SUPABASE_URL/rest/v1/departments?select=id&limit=1" \
+            -H "apikey: $SUPABASE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_KEY")
+          
+          HTTP_BODY=$(echo "$RESPONSE" | sed '$d')
+          HTTP_STATUS=$(echo "$RESPONSE" | tail -n 1)
+          
+          echo "HTTP Status Code: $HTTP_STATUS"
+          echo "Response Body: $HTTP_BODY"
+          
+          if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
+            echo "✅ Direct Supabase query succeeded! Database is active."
+          else
+            echo "❌ Direct Supabase query failed with status $HTTP_STATUS"
+            exit 1
+          fi
+
+      - name: Summary
+        run: |
+          echo "🎉 Keep-Alive workflow completed successfully at $(date -u)!"
+          echo "Supabase 7-day inactivity pause counter has been reset."
