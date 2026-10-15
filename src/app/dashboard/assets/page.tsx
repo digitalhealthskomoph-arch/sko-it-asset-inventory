@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Search, Loader2, Plus, MonitorSmartphone, Filter, Image as ImageIcon, Wrench, AlertTriangle, PackageX } from 'lucide-react';
+import { Search, Loader2, Plus, MonitorSmartphone, Filter, Image as ImageIcon, Wrench, AlertTriangle, PackageX, Trash2, CheckSquare, Square, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getSafeImageUrl } from '@/lib/image-url';
@@ -19,6 +19,11 @@ export default function AssetListPage() {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
   const [selectedRepairFilter, setSelectedRepairFilter] = useState('');
+
+  // Bulk Selection & Delete States
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetchFilters();
@@ -97,6 +102,51 @@ export default function AssetListPage() {
 
     return matchesSearch && matchesDept && matchesCat && matchesStatus && matchesRepair;
   });
+
+  const handleToggleSelect = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const next = new Set(selectedIds);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    setSelectedIds(next);
+  };
+
+  const handleSelectAll = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (selectedIds.size === filteredAssets.length && filteredAssets.length > 0) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredAssets.map(a => a.id)));
+    }
+  };
+
+  const handleClearSelection = () => {
+    setSelectedIds(new Set());
+  };
+
+  const handleConfirmDelete = async () => {
+    if (selectedIds.size === 0) return;
+    setDeleting(true);
+    try {
+      const idsToDelete = Array.from(selectedIds);
+      const { error } = await supabase.from('assets').delete().in('id', idsToDelete);
+      if (error) throw error;
+
+      setAssets(prev => prev.filter(a => !selectedIds.has(a.id)));
+      const count = selectedIds.size;
+      setSelectedIds(new Set());
+      setShowDeleteModal(false);
+      alert(`ลบข้อมูลครุภัณฑ์เรียบร้อยแล้ว (${count} รายการ)`);
+    } catch (error: any) {
+      console.error('Delete error:', error);
+      alert(`เกิดข้อผิดพลาดในการลบ: ${error.message}`);
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <div className="space-y-6 pb-10">
@@ -204,6 +254,20 @@ export default function AssetListPage() {
             <table className="w-full text-left border-collapse min-w-[800px]">
               <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm">
                 <tr>
+                  <th className="px-4 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-10 text-center">
+                    <button 
+                      type="button" 
+                      onClick={(e) => handleSelectAll(e)} 
+                      className="cursor-pointer text-slate-400 hover:text-slate-600 transition-colors"
+                      title={selectedIds.size === filteredAssets.length && filteredAssets.length > 0 ? "ยกเลิกการเลือกทั้งหมด" : "เลือกทั้งหมดในหน้านี้"}
+                    >
+                      {selectedIds.size > 0 && selectedIds.size === filteredAssets.length ? (
+                        <CheckSquare className="w-4 h-4 text-rose-600" />
+                      ) : (
+                        <Square className="w-4 h-4" />
+                      )}
+                    </button>
+                  </th>
                   <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider w-16">รูปภาพ</th>
                   <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">รหัสครุภัณฑ์</th>
                   <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">ชื่ออุปกรณ์</th>
@@ -214,12 +278,27 @@ export default function AssetListPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
-                {filteredAssets.map((asset) => (
-                  <tr 
-                    key={asset.id} 
-                    onClick={() => router.push(`/dashboard/assets/${asset.id}`)}
-                    className="hover:bg-slate-50 transition-colors group cursor-pointer"
-                  >
+                {filteredAssets.map((asset) => {
+                  const isSelected = selectedIds.has(asset.id);
+                  return (
+                    <tr 
+                      key={asset.id} 
+                      onClick={() => router.push(`/dashboard/assets/${asset.id}`)}
+                      className={`${isSelected ? 'bg-rose-50/60' : 'hover:bg-slate-50'} transition-colors group cursor-pointer`}
+                    >
+                      <td className="px-4 py-4 text-center w-10" onClick={(e) => e.stopPropagation()}>
+                        <button 
+                          type="button" 
+                          onClick={(e) => handleToggleSelect(asset.id, e)} 
+                          className="cursor-pointer transition-colors"
+                        >
+                          {isSelected ? (
+                            <CheckSquare className="w-4 h-4 text-rose-600" />
+                          ) : (
+                            <Square className="w-4 h-4 text-slate-300 hover:text-slate-500" />
+                          )}
+                        </button>
+                      </td>
                     <td className="px-6 py-4">
                       {asset.photo_url ? (
                         <div className="relative group/img">
@@ -306,12 +385,113 @@ export default function AssetListPage() {
                       </span>
                     </td>
                   </tr>
-                ))}
+                );
+              })}
               </tbody>
             </table>
           )}
         </div>
       </div>
+
+      {/* Floating Action Bar */}
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900/95 backdrop-blur-md text-white px-5 py-3 rounded-2xl shadow-2xl border border-slate-700/80 flex items-center gap-4 animate-in fade-in slide-in-from-bottom-4 duration-200">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse"></span>
+            <span className="text-sm font-semibold whitespace-nowrap">
+              เลือกอยู่ {selectedIds.size} รายการ
+            </span>
+          </div>
+          <div className="h-4 w-px bg-slate-700" />
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowDeleteModal(true)}
+              className="bg-rose-600 hover:bg-rose-700 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer whitespace-nowrap"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              ลบ {selectedIds.size} รายการที่เลือก
+            </button>
+            <button
+              type="button"
+              onClick={handleClearSelection}
+              className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+              title="ยกเลิกการเลือก"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Safety Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg p-6 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-rose-100 text-rose-600 rounded-2xl shrink-0">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-800">ยืนยันการลบข้อมูลครุภัณฑ์</h3>
+                <p className="text-sm text-slate-500 mt-1">
+                  คุณกำลังจะลบข้อมูลครุภัณฑ์จำนวน <span className="font-bold text-rose-600">{selectedIds.size} รายการ</span> ออกจากระบบ
+                </p>
+              </div>
+            </div>
+
+            {/* Warning Box */}
+            <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 text-xs text-rose-800 font-medium">
+              ⚠️ การกระทำนี้จะลบข้อมูลออกจากฐานข้อมูลอย่างถาวร และ<span className="font-bold underline">ไม่สามารถกู้คืนได้</span>
+            </div>
+
+            {/* Selected Items Preview */}
+            <div className="border border-slate-200 rounded-xl max-h-48 overflow-y-auto divide-y divide-slate-100 bg-slate-50/50">
+              {assets
+                .filter(a => selectedIds.has(a.id))
+                .map((item, idx) => (
+                  <div key={item.id} className="p-2.5 text-xs flex items-center justify-between">
+                    <div className="truncate mr-2">
+                      <span className="font-mono font-bold text-slate-800 mr-2">{item.asset_number || 'ไม่ระบุรหัส'}</span>
+                      <span className="text-slate-600">{item.asset_name || item.brand_model || '-'}</span>
+                    </div>
+                    <span className="text-[11px] text-slate-400 shrink-0">#{idx + 1}</span>
+                  </div>
+                ))}
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(false)}
+                disabled={deleting}
+                className="px-4 py-2 border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-xl text-sm font-medium transition-colors cursor-pointer"
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={deleting}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white rounded-xl text-sm font-bold transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
+              >
+                {deleting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    กำลังลบข้อมูล...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    ยืนยันลบถาวร ({selectedIds.size})
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
