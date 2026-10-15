@@ -448,6 +448,205 @@ export default function DisposalPage() {
     window.print();
   };
 
+  // Render official report content (Used in both modal preview and print container)
+  const renderReportContent = (isForPrint: boolean) => (
+    <div className={`print-area ${isForPrint ? 'w-full bg-white text-black font-sans m-0 p-0' : 'bg-white text-black p-8 sm:p-12 shadow-md w-full max-w-[1100px] font-sans'}`}>
+      {/* 1. Official Header */}
+      <div className="text-center pb-4 border-b-2 border-slate-800">
+        <h2 className="text-xl font-bold tracking-wide">
+          สำนักงานสาธารณสุขจังหวัดสระแก้ว
+        </h2>
+        <h3 className="text-lg font-bold mt-1 text-slate-900">
+          รายงานสรุปรายการครุภัณฑ์คอมพิวเตอร์และอุปกรณ์ไอทีเพื่อเสนอขอจำหน่าย
+        </h3>
+        <div className="flex justify-between items-center text-xs mt-3 text-slate-700">
+          <span>เลขที่เอกสาร: {docNumber}</span>
+          <span>วันที่: {reportDate}</span>
+        </div>
+        <div className="text-left text-xs mt-2 text-slate-600 bg-slate-50 p-2.5 rounded border border-slate-200">
+          <span className="font-semibold">เรื่อง / วัตถุประสงค์: </span>
+          <span>{reportObjective}</span>
+        </div>
+      </div>
+
+      {/* 2. Official Table */}
+      <div className="mt-4">
+        <table className="w-full text-xs text-left border-collapse border border-slate-400">
+          <thead>
+            <tr className="bg-slate-100 text-slate-900 font-bold border-b border-slate-400">
+              <th className="border border-slate-400 px-2 py-2 text-center w-8">ที่</th>
+              <th className="border border-slate-400 px-2 py-2 text-center w-16">รูปภาพ</th>
+              <th className="border border-slate-400 px-2 py-2 w-32">รหัสครุภัณฑ์ / เลข GF</th>
+              <th className="border border-slate-400 px-2 py-2">รายการ / ยี่ห้อ / รุ่น / S/N</th>
+              <th className="border border-slate-400 px-2 py-2 w-28">กลุ่มงาน / ผู้ถือครอง</th>
+              <th className="border border-slate-400 px-2 py-2 text-center w-20">วันที่ได้มา</th>
+              <th className="border border-slate-400 px-2 py-2 text-right w-24">ราคาจัดซื้อ (บาท)</th>
+              <th className="border border-slate-400 px-2 py-2">สภาพการชำรุด / เหตุผลที่เสนอขอจำหน่าย</th>
+            </tr>
+          </thead>
+          <tbody>
+            {itemsForAction.map((asset, idx) => {
+              const photoUrl = getSafeImageUrl(asset.photo_url);
+              const age = getAssetAge(asset.acquisition_date);
+              const repairs = repairCounts[asset.id] || 0;
+
+              return (
+                <tr key={asset.id} className="border-b border-slate-300">
+                  <td className="border border-slate-300 px-2 py-2 text-center font-medium">
+                    {idx + 1}
+                  </td>
+                  <td className="border border-slate-300 px-1 py-1 text-center">
+                    {photoUrl ? (
+                      <div className="w-12 h-12 mx-auto rounded overflow-hidden border border-slate-300 bg-white">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={photoUrl}
+                          alt="Asset"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <span className="text-[10px] text-slate-400">ไม่มีรูป</span>
+                    )}
+                  </td>
+                  <td className="border border-slate-300 px-2 py-2 font-mono">
+                    <div className="font-semibold text-slate-900">
+                      {asset.asset_number || '-'}
+                    </div>
+                    {asset.gf_number && (
+                      <div className="text-[10px] text-slate-600">GF: {asset.gf_number}</div>
+                    )}
+                  </td>
+                  <td className="border border-slate-300 px-2 py-2">
+                    <div className="font-semibold text-slate-900">{asset.asset_name || '-'}</div>
+                    <div className="text-[11px] text-slate-700">
+                      {asset.brand_model || '-'}
+                    </div>
+                    {asset.serial_number && (
+                      <div className="text-[10px] text-slate-500 font-mono">
+                        S/N: {asset.serial_number}
+                      </div>
+                    )}
+                  </td>
+                  <td className="border border-slate-300 px-2 py-2">
+                    <div>{asset.departments?.name || '-'}</div>
+                    <div className="text-[10px] text-slate-500">
+                      {asset.personnel
+                        ? `${asset.personnel.first_name} ${asset.personnel.last_name}`
+                        : '-'}
+                    </div>
+                  </td>
+                  <td className="border border-slate-300 px-2 py-2 text-center">
+                    <div>{formatDateThai(asset.acquisition_date)}</div>
+                    {age !== null && (
+                      <div className="text-[10px] text-slate-500">({age} ปี)</div>
+                    )}
+                  </td>
+                  <td className="border border-slate-300 px-2 py-2 text-right font-medium">
+                    {formatPrice(asset.purchase_price)}
+                  </td>
+                  <td className="border border-slate-300 px-2 py-2">
+                    <div>
+                      {asset.problem_description ||
+                        (asset.status === 'เสื่อมสภาพ'
+                          ? 'เสื่อมสภาพตามอายุการใช้งาน ไม่คุ้มค่าในการซ่อมแซม'
+                          : asset.status === 'ชำรุด'
+                          ? 'ชำรุด ไม่สามารถใช้งานได้'
+                          : 'เสนอจำหน่าย')}
+                    </div>
+                    {repairs > 0 && (
+                      <div className="text-[10px] text-rose-700 mt-0.5">
+                        (มีประวัติส่งซ่อม {repairs} ครั้ง)
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+          <tfoot>
+            <tr className="bg-slate-100 font-bold border-t-2 border-slate-400">
+              <td
+                colSpan={6}
+                className="border border-slate-400 px-3 py-2 text-right text-slate-800"
+              >
+                รวมจำนวนทั้งสิ้น {itemsForAction.length} รายการ | รวมมูลค่าจัดซื้อทั้งสิ้น:
+              </td>
+              <td className="border border-slate-400 px-2 py-2 text-right text-slate-900">
+                {formatPrice(
+                  itemsForAction.reduce(
+                    (sum, a) => sum + (Number(a.purchase_price) || 0),
+                    0
+                  )
+                )}
+              </td>
+              <td className="border border-slate-400 px-2 py-2 text-xs text-slate-600">
+                บาท
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      {/* 3. Official Signatures Section */}
+      <div className="signature-block mt-8 pt-4 grid grid-cols-3 gap-6 text-center text-xs">
+        {/* Signer 1 */}
+        <div className="flex flex-col items-center">
+          <div className="h-14 flex items-end justify-center w-48 border-b border-dotted border-slate-400 pb-1">
+            {signer1Name ? (
+              <span className="font-semibold text-slate-800">{signer1Name}</span>
+            ) : (
+              <span className="text-slate-300 text-[10px]">(ลงชื่อ)</span>
+            )}
+          </div>
+          <div className="mt-1.5 font-medium text-slate-800">
+            (............................................................)
+          </div>
+          <div className="mt-1 text-slate-600">{signer1Pos}</div>
+          <div className="text-[11px] text-slate-500 mt-0.5">
+            วันที่ ......./......./...........
+          </div>
+        </div>
+
+        {/* Signer 2 */}
+        <div className="flex flex-col items-center">
+          <div className="h-14 flex items-end justify-center w-48 border-b border-dotted border-slate-400 pb-1">
+            {signer2Name ? (
+              <span className="font-semibold text-slate-800">{signer2Name}</span>
+            ) : (
+              <span className="text-slate-300 text-[10px]">(ลงชื่อ)</span>
+            )}
+          </div>
+          <div className="mt-1.5 font-medium text-slate-800">
+            (............................................................)
+          </div>
+          <div className="mt-1 text-slate-600">{signer2Pos}</div>
+          <div className="text-[11px] text-slate-500 mt-0.5">
+            วันที่ ......./......./...........
+          </div>
+        </div>
+
+        {/* Signer 3 */}
+        <div className="flex flex-col items-center">
+          <div className="h-14 flex items-end justify-center w-48 border-b border-dotted border-slate-400 pb-1">
+            {signer3Name ? (
+              <span className="font-semibold text-slate-800">{signer3Name}</span>
+            ) : (
+              <span className="text-slate-300 text-[10px]">(ลงชื่อ)</span>
+            )}
+          </div>
+          <div className="mt-1.5 font-medium text-slate-800">
+            (............................................................)
+          </div>
+          <div className="mt-1 text-slate-600">{signer3Pos}</div>
+          <div className="text-[11px] text-slate-500 mt-0.5">
+            วันที่ ......./......./...........
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-6 pb-12">
       {/* 1. Header Toolbar */}
@@ -911,11 +1110,12 @@ export default function DisposalPage() {
       </div>
 
       {/* 4. PDF Preview & Print Modal */}
+      {/* 4. PDF Preview Modal (Screen only, completely hidden during print) */}
       {showPdfModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 sm:p-6 overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 sm:p-6 overflow-y-auto no-print">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-6xl max-h-[92vh] flex flex-col overflow-hidden">
-            {/* Modal Controls (No Print) */}
-            <div className="p-4 border-b border-slate-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 bg-slate-50 no-print">
+            {/* Modal Controls */}
+            <div className="p-4 border-b border-slate-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 bg-slate-50">
               <div>
                 <h3 className="font-bold text-slate-800 flex items-center gap-2">
                   <Printer className="w-5 h-5 text-purple-600" />
@@ -943,8 +1143,8 @@ export default function DisposalPage() {
               </div>
             </div>
 
-            {/* Quick Metadata Config Bar (No Print) */}
-            <div className="p-4 bg-purple-50/50 border-b border-purple-100 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs no-print">
+            {/* Quick Metadata Config Bar */}
+            <div className="p-4 bg-purple-50/50 border-b border-purple-100 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">เลขที่หนังสือ / รายงาน</label>
                 <input
@@ -974,207 +1174,18 @@ export default function DisposalPage() {
               </div>
             </div>
 
-            {/* Printable Area (Styled as Official Thai Report) */}
+            {/* Scrollable Preview on Screen */}
             <div className="flex-1 overflow-y-auto p-6 sm:p-10 bg-slate-100 flex justify-center">
-              <div className="print-area bg-white text-black p-8 sm:p-12 shadow-md w-full max-w-[1100px] font-sans">
-                {/* 1. Official Header */}
-                <div className="text-center pb-4 border-b-2 border-slate-800">
-                  <h2 className="text-xl font-bold tracking-wide">
-                    สำนักงานสาธารณสุขจังหวัดสระแก้ว
-                  </h2>
-                  <h3 className="text-lg font-bold mt-1 text-slate-900">
-                    รายงานสรุปรายการครุภัณฑ์คอมพิวเตอร์และอุปกรณ์ไอทีเพื่อเสนอขอจำหน่าย
-                  </h3>
-                  <div className="flex justify-between items-center text-xs mt-3 text-slate-700">
-                    <span>เลขที่เอกสาร: {docNumber}</span>
-                    <span>วันที่: {reportDate}</span>
-                  </div>
-                  <div className="text-left text-xs mt-2 text-slate-600 bg-slate-50 p-2.5 rounded border border-slate-200">
-                    <span className="font-semibold">เรื่อง / วัตถุประสงค์: </span>
-                    <span>{reportObjective}</span>
-                  </div>
-                </div>
-
-                {/* 2. Official Table */}
-                <div className="mt-4">
-                  <table className="w-full text-xs text-left border-collapse border border-slate-400">
-                    <thead>
-                      <tr className="bg-slate-100 text-slate-900 font-bold border-b border-slate-400">
-                        <th className="border border-slate-400 px-2 py-2 text-center w-8">ที่</th>
-                        <th className="border border-slate-400 px-2 py-2 text-center w-16">รูปภาพ</th>
-                        <th className="border border-slate-400 px-2 py-2 w-32">รหัสครุภัณฑ์ / เลข GF</th>
-                        <th className="border border-slate-400 px-2 py-2">รายการ / ยี่ห้อ / รุ่น / S/N</th>
-                        <th className="border border-slate-400 px-2 py-2 w-28">กลุ่มงาน / ผู้ถือครอง</th>
-                        <th className="border border-slate-400 px-2 py-2 text-center w-20">วันที่ได้มา</th>
-                        <th className="border border-slate-400 px-2 py-2 text-right w-24">ราคาจัดซื้อ (บาท)</th>
-                        <th className="border border-slate-400 px-2 py-2">สภาพการชำรุด / เหตุผลที่เสนอขอจำหน่าย</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {itemsForAction.map((asset, idx) => {
-                        const photoUrl = getSafeImageUrl(asset.photo_url);
-                        const age = getAssetAge(asset.acquisition_date);
-                        const repairs = repairCounts[asset.id] || 0;
-
-                        return (
-                          <tr key={asset.id} className="border-b border-slate-300">
-                            <td className="border border-slate-300 px-2 py-2 text-center font-medium">
-                              {idx + 1}
-                            </td>
-                            <td className="border border-slate-300 px-1 py-1 text-center">
-                              {photoUrl ? (
-                                <div className="w-12 h-12 mx-auto rounded overflow-hidden border border-slate-300 bg-white">
-                                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                                  <img
-                                    src={photoUrl}
-                                    alt="Asset"
-                                    className="w-full h-full object-cover"
-                                  />
-                                </div>
-                              ) : (
-                                <span className="text-[10px] text-slate-400">ไม่มีรูป</span>
-                              )}
-                            </td>
-                            <td className="border border-slate-300 px-2 py-2 font-mono">
-                              <div className="font-semibold text-slate-900">
-                                {asset.asset_number || '-'}
-                              </div>
-                              {asset.gf_number && (
-                                <div className="text-[10px] text-slate-600">GF: {asset.gf_number}</div>
-                              )}
-                            </td>
-                            <td className="border border-slate-300 px-2 py-2">
-                              <div className="font-semibold text-slate-900">{asset.asset_name || '-'}</div>
-                              <div className="text-[11px] text-slate-700">
-                                {asset.brand_model || '-'}
-                              </div>
-                              {asset.serial_number && (
-                                <div className="text-[10px] text-slate-500 font-mono">
-                                  S/N: {asset.serial_number}
-                                </div>
-                              )}
-                            </td>
-                            <td className="border border-slate-300 px-2 py-2">
-                              <div>{asset.departments?.name || '-'}</div>
-                              <div className="text-[10px] text-slate-500">
-                                {asset.personnel
-                                  ? `${asset.personnel.first_name} ${asset.personnel.last_name}`
-                                  : '-'}
-                              </div>
-                            </td>
-                            <td className="border border-slate-300 px-2 py-2 text-center">
-                              <div>{formatDateThai(asset.acquisition_date)}</div>
-                              {age !== null && (
-                                <div className="text-[10px] text-slate-500">({age} ปี)</div>
-                              )}
-                            </td>
-                            <td className="border border-slate-300 px-2 py-2 text-right font-medium">
-                              {formatPrice(asset.purchase_price)}
-                            </td>
-                            <td className="border border-slate-300 px-2 py-2">
-                              <div>
-                                {asset.problem_description ||
-                                  (asset.status === 'เสื่อมสภาพ'
-                                    ? 'เสื่อมสภาพตามอายุการใช้งาน ไม่คุ้มค่าในการซ่อมแซม'
-                                    : asset.status === 'ชำรุด'
-                                    ? 'ชำรุด ไม่สามารถใช้งานได้'
-                                    : 'เสนอจำหน่าย')}
-                              </div>
-                              {repairs > 0 && (
-                                <div className="text-[10px] text-rose-700 mt-0.5">
-                                  (มีประวัติส่งซ่อม {repairs} ครั้ง)
-                                </div>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                    <tfoot>
-                      <tr className="bg-slate-100 font-bold border-t-2 border-slate-400">
-                        <td
-                          colSpan={6}
-                          className="border border-slate-400 px-3 py-2 text-right text-slate-800"
-                        >
-                          รวมจำนวนทั้งสิ้น {itemsForAction.length} รายการ | รวมมูลค่าจัดซื้อทั้งสิ้น:
-                        </td>
-                        <td className="border border-slate-400 px-2 py-2 text-right text-slate-900">
-                          {formatPrice(
-                            itemsForAction.reduce(
-                              (sum, a) => sum + (Number(a.purchase_price) || 0),
-                              0
-                            )
-                          )}
-                        </td>
-                        <td className="border border-slate-400 px-2 py-2 text-xs text-slate-600">
-                          บาท
-                        </td>
-                      </tr>
-                    </tfoot>
-                  </table>
-                </div>
-
-                {/* 3. Official Signatures Section */}
-                <div className="mt-8 pt-4 grid grid-cols-3 gap-6 text-center text-xs">
-                  {/* Signer 1 */}
-                  <div className="flex flex-col items-center">
-                    <div className="h-14 flex items-end justify-center w-48 border-b border-dotted border-slate-400 pb-1">
-                      {signer1Name ? (
-                        <span className="font-semibold text-slate-800">{signer1Name}</span>
-                      ) : (
-                        <span className="text-slate-300 text-[10px]">(ลงชื่อ)</span>
-                      )}
-                    </div>
-                    <div className="mt-1.5 font-medium text-slate-800">
-                      (............................................................)
-                    </div>
-                    <div className="mt-1 text-slate-600">{signer1Pos}</div>
-                    <div className="text-[11px] text-slate-500 mt-0.5">
-                      วันที่ ......./......./...........
-                    </div>
-                  </div>
-
-                  {/* Signer 2 */}
-                  <div className="flex flex-col items-center">
-                    <div className="h-14 flex items-end justify-center w-48 border-b border-dotted border-slate-400 pb-1">
-                      {signer2Name ? (
-                        <span className="font-semibold text-slate-800">{signer2Name}</span>
-                      ) : (
-                        <span className="text-slate-300 text-[10px]">(ลงชื่อ)</span>
-                      )}
-                    </div>
-                    <div className="mt-1.5 font-medium text-slate-800">
-                      (............................................................)
-                    </div>
-                    <div className="mt-1 text-slate-600">{signer2Pos}</div>
-                    <div className="text-[11px] text-slate-500 mt-0.5">
-                      วันที่ ......./......./...........
-                    </div>
-                  </div>
-
-                  {/* Signer 3 */}
-                  <div className="flex flex-col items-center">
-                    <div className="h-14 flex items-end justify-center w-48 border-b border-dotted border-slate-400 pb-1">
-                      {signer3Name ? (
-                        <span className="font-semibold text-slate-800">{signer3Name}</span>
-                      ) : (
-                        <span className="text-slate-300 text-[10px]">(ลงชื่อ)</span>
-                      )}
-                    </div>
-                    <div className="mt-1.5 font-medium text-slate-800">
-                      (............................................................)
-                    </div>
-                    <div className="mt-1 text-slate-600">{signer3Pos}</div>
-                    <div className="text-[11px] text-slate-500 mt-0.5">
-                      วันที่ ......./......./...........
-                    </div>
-                  </div>
-                </div>
-              </div>
+              {renderReportContent(false)}
             </div>
           </div>
         </div>
       )}
+
+      {/* 5. Dedicated Print Container (Hidden on screen, active only when window.print() is called) */}
+      <div className="hidden print:block w-full m-0 p-0">
+        {renderReportContent(true)}
+      </div>
     </div>
   );
 }
