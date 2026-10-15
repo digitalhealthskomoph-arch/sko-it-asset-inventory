@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Search, Loader2, Plus, MonitorSmartphone, Filter, Image as ImageIcon, Wrench, AlertTriangle } from 'lucide-react';
+import { Search, Loader2, Plus, MonitorSmartphone, Filter, Image as ImageIcon, Wrench, AlertTriangle, PackageX } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getSafeImageUrl } from '@/lib/image-url';
@@ -105,13 +105,22 @@ export default function AssetListPage() {
           <h1 className="text-2xl font-bold text-slate-800">รายการครุภัณฑ์ทั้งหมด</h1>
           <p className="text-slate-500 text-sm mt-1">ทะเบียนคุมทรัพย์สิน พ.ร.บ.ไซเบอร์ และ งานไอที</p>
         </div>
-        <Link 
-          href="/dashboard/survey"
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors flex items-center shadow-sm"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          เพิ่มรายการใหม่ / สำรวจ
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link 
+            href="/dashboard/disposal"
+            className="bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 px-4 py-2 rounded-xl text-sm font-medium transition-colors flex items-center shadow-xs"
+          >
+            <PackageX className="w-4 h-4 mr-2 text-purple-600" />
+            เสนอขอจำหน่ายพัสดุ (Disposal)
+          </Link>
+          <Link 
+            href="/dashboard/survey"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors flex items-center shadow-sm"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            เพิ่มรายการใหม่ / สำรวจ
+          </Link>
+        </div>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col h-[calc(100vh-200px)] min-h-[500px]">
@@ -157,6 +166,8 @@ export default function AssetListPage() {
                 <option value="ใช้งาน">ใช้งาน</option>
                 <option value="ชำรุด">ชำรุด</option>
                 <option value="เสื่อมสภาพ">เสื่อมสภาพ</option>
+                <option value="พร้อมจำหน่าย">พร้อมจำหน่าย</option>
+                <option value="จำหน่ายแล้ว">จำหน่ายแล้ว</option>
                 <option value="ไม่พบ">ไม่พบ</option>
               </select>
 
@@ -283,10 +294,13 @@ export default function AssetListPage() {
                       })()}
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${
                         asset.status === 'ใช้งาน' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
                         asset.status === 'ชำรุด' ? 'bg-rose-50 text-rose-700 border-rose-200' :
-                        'bg-amber-50 text-amber-700 border-amber-200'
+                        asset.status === 'เสื่อมสภาพ' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                        asset.status === 'พร้อมจำหน่าย' ? 'bg-purple-50 text-purple-700 border-purple-200' :
+                        asset.status === 'จำหน่ายแล้ว' ? 'bg-slate-100 text-slate-600 border-slate-300' :
+                        'bg-slate-100 text-slate-700 border-slate-200'
                       }`}>
                         {asset.status || 'ใช้งาน'}
                       </span>

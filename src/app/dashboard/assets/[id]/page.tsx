@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { 
   Camera, Save, Loader2, X, Trash2, ArrowLeft, Sparkles, 
   AlertTriangle, AlertCircle, CheckCircle2, Clock, Wrench, 
-  FileText, Star, ExternalLink, Image as ImageIcon 
+  FileText, Star, ExternalLink, Image as ImageIcon, PackageX 
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -410,7 +410,9 @@ export default function EditAssetPage({ params }: { params: Promise<{ id: string
               <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 disabled:bg-slate-100 disabled:text-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
                 <option value="ใช้งาน">ใช้งานได้ปกติ</option>
                 <option value="ชำรุด">ชำรุด / รอซ่อม</option>
-                <option value="เสื่อมสภาพ">เสื่อมสภาพ / รอจำหน่าย</option>
+                <option value="เสื่อมสภาพ">เสื่อมสภาพ</option>
+                <option value="พร้อมจำหน่าย">พร้อมจำหน่าย (ตรวจนับสภาพแล้ว)</option>
+                <option value="จำหน่ายแล้ว">จำหน่ายแล้ว (ตัดจำหน่ายสำเร็จ)</option>
                 <option value="ไม่พบ">ไม่พบ / สูญหาย</option>
               </select>
             </div>
@@ -564,6 +566,30 @@ export default function EditAssetPage({ params }: { params: Promise<{ id: string
                           </li>
                         ))}
                       </ul>
+
+                      {status !== 'พร้อมจำหน่าย' && status !== 'จำหน่ายแล้ว' && (recommendation === 'critical' || recommendation === 'warning') && (
+                        <div className="mt-3 pt-2 border-t border-rose-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <span className="text-xs text-rose-800 font-medium">
+                            ต้องการเสนอขอจำหน่ายครุภัณฑ์ชิ้นนี้หรือไม่?
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setStatus('พร้อมจำหน่าย')}
+                            className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer flex items-center gap-1.5 w-fit"
+                          >
+                            <PackageX className="w-3.5 h-3.5" />
+                            ตั้งสถานะเป็น "พร้อมจำหน่าย"
+                          </button>
+                        </div>
+                      )}
+                      {status === 'พร้อมจำหน่าย' && (
+                        <div className="mt-3 pt-2 border-t border-purple-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-purple-900 font-semibold">
+                          <span>📦 รายการนี้ถูกระบุว่า "พร้อมจำหน่าย" เรียบร้อยแล้ว</span>
+                          <Link href="/dashboard/disposal" className="text-purple-700 hover:underline flex items-center gap-1 font-bold">
+                            ไปที่ระบบจัดการขอจำหน่าย &rarr;
+                          </Link>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

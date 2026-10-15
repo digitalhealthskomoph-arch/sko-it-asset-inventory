@@ -424,7 +424,9 @@ export default function SurveyPage() {
               >
                 <option value="ใช้งาน">ใช้งานได้ปกติ</option>
                 <option value="ชำรุด">ชำรุด / รอซ่อม</option>
-                <option value="เสื่อมสภาพ">เสื่อมสภาพ / รอจำหน่าย</option>
+                <option value="เสื่อมสภาพ">เสื่อมสภาพ</option>
+                <option value="พร้อมจำหน่าย">พร้อมจำหน่าย (ตรวจนับสภาพแล้ว)</option>
+                <option value="จำหน่ายแล้ว">จำหน่ายแล้ว (ตัดจำหน่ายสำเร็จ)</option>
                 <option value="ไม่พบ">ไม่พบ / สูญหาย</option>
               </select>
             </div>
