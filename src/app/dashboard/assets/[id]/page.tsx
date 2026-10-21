@@ -10,6 +10,13 @@ import {
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getSafeImageUrl } from '@/lib/image-url';
+import {
+  parseProcurementMeta,
+  serializeProcurementMeta,
+  mapProcurementStatusToItStatus,
+  mapProcurementLocationToDeptName,
+  ProcurementMeta,
+} from '@/lib/procurement-sync';
 
 function formatDuration(startStr: string, endStr?: string | null): string {
   if (!endStr) return '-';
@@ -55,6 +62,11 @@ export default function EditAssetPage({ params }: { params: Promise<{ id: string
   const [ipAddress, setIpAddress] = useState('');
   const [status, setStatus] = useState('ใช้งาน');
   const [notes, setNotes] = useState('');
+  const [acquisitionDate, setAcquisitionDate] = useState('');
+  const [purchasePrice, setPurchasePrice] = useState<string>('');
+  const [acquisitionMethod, setAcquisitionMethod] = useState('');
+  const [locationDetails, setLocationDetails] = useState('');
+  const [procMeta, setProcMeta] = useState<ProcurementMeta>({});
   
   // Image State
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -104,6 +116,15 @@ export default function EditAssetPage({ params }: { params: Promise<{ id: string
         setStatus(asset.status || 'ใช้งาน');
         setNotes(asset.notes || '');
         setExistingPhotoUrl(asset.photo_url || null);
+        setAcquisitionDate(asset.acquisition_date || '');
+        setPurchasePrice(
+          asset.purchase_price !== null && asset.purchase_price !== undefined
+            ? String(asset.purchase_price)
+            : ''
+        );
+        setAcquisitionMethod(asset.acquisition_method || '');
+        setLocationDetails(asset.location_details || '');
+        setProcMeta(parseProcurementMeta(asset.proposed_action));
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -239,6 +260,13 @@ export default function EditAssetPage({ params }: { params: Promise<{ id: string
       }
 
       // Update Record
+      const updatedMeta: ProcurementMeta = {
+        ...procMeta,
+        status_reconciled: true,
+        dept_reconciled: true,
+        reconciled_at: new Date().toISOString(),
+      };
+
       const { error: updateError } = await supabase.from('assets').update({
         asset_number: assetNumber || null,
         asset_name: assetName,
@@ -253,6 +281,11 @@ export default function EditAssetPage({ params }: { params: Promise<{ id: string
         status: status,
         notes: notes,
         photo_url: photoUrl,
+        acquisition_date: acquisitionDate || null,
+        purchase_price: purchasePrice !== '' ? Number(purchasePrice) : null,
+        acquisition_method: acquisitionMethod || null,
+        location_details: locationDetails || null,
+        proposed_action: Object.keys(procMeta).length > 0 ? serializeProcurementMeta(updatedMeta) : null,
         last_check_date: new Date().toISOString(),
       }).eq('id', id);
 
@@ -406,15 +439,118 @@ export default function EditAssetPage({ params }: { params: Promise<{ id: string
           <div className="space-y-4">
             <h3 className="font-medium text-slate-800 border-b pb-2">3. สถานะและรูปภาพ</h3>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">สถานะปัจจุบัน</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">สถานะปัจจุบัน (IT สุทธิ)</label>
               <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 disabled:bg-slate-100 disabled:text-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
                 <option value="ใช้งาน">ใช้งานได้ปกติ</option>
+                <option value="รอสำรวจ">รอสำรวจ (นำเข้าจากบัญชีพัสดุ)</option>
                 <option value="ชำรุด">ชำรุด / รอซ่อม</option>
                 <option value="เสื่อมสภาพ">เสื่อมสภาพ</option>
                 <option value="พร้อมจำหน่าย">พร้อมจำหน่าย (ตรวจนับสภาพแล้ว)</option>
                 <option value="จำหน่ายแล้ว">จำหน่ายแล้ว (ตัดจำหน่ายสำเร็จ)</option>
                 <option value="ไม่พบ">ไม่พบ / สูญหาย</option>
               </select>
+            </div>
+
+            {/* ข้อมูลทะเบียนพัสดุและการเปรียบเทียบ 2 คอลัมน์ */}
+            <div className="bg-indigo-50/50 border border-indigo-200/80 rounded-xl p-4 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-indigo-200/60 pb-2">
+                <div>
+                  <h4 className="text-sm font-bold text-indigo-950">
+                    ข้อมูลทะเบียนพัสดุ (Procurement Data & Reconciliation)
+                  </h4>
+                  <p className="text-xs text-indigo-700/80">
+                    ข้อมูลอ้างอิงจากรายงานการตรวจสอบพัสดุประจำปีของงานพัสดุ
+                  </p>
+                </div>
+                {procMeta.proc_status && (
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStatus(mapProcurementStatusToItStatus(procMeta.proc_status));
+                        const mappedDeptName = mapProcurementLocationToDeptName(
+                          procMeta.proc_location || locationDetails
+                        );
+                        if (mappedDeptName) {
+                          const targetDept = departments.find((d) => d.name.trim() === mappedDeptName);
+                          if (targetDept) setSelectedDept(targetDept.id);
+                        }
+                      }}
+                      className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                    >
+                      ดึงสถานะ/กลุ่มงานตามพัสดุ
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {procMeta.proc_status && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white p-3 rounded-xl border border-indigo-100 text-xs">
+                  <div>
+                    <span className="text-slate-500">สภาพตามบัญชีพัสดุ:</span>{' '}
+                    <span className="font-bold text-indigo-800">{procMeta.proc_status}</span>
+                    {procMeta.proc_seq && (
+                      <span className="text-slate-400 ml-1">(ลำดับ #{procMeta.proc_seq})</span>
+                    )}
+                  </div>
+                  <div>
+                    <span className="text-slate-500">ใช้ที่ (ตามบัญชีพัสดุ):</span>{' '}
+                    <span className="font-bold text-slate-800">
+                      {procMeta.proc_location || locationDetails || '-'}
+                    </span>
+                  </div>
+                  {procMeta.proc_desc && (
+                    <div className="sm:col-span-2 text-slate-600">
+                      <span className="text-slate-500">รายละเอียดพัสดุ:</span> {procMeta.proc_desc}
+                    </div>
+                  )}
+                  {procMeta.is_bundled_item && (
+                    <div className="sm:col-span-2 text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-1.5 rounded-lg font-medium">
+                      💡 รายการนี้ใช้รหัสครุภัณฑ์ร่วมกับชุดหลัก (ราคาทั้งชุด{' '}
+                      {Number(procMeta.full_set_price || 0).toLocaleString()} บาท ถูกคิดรวมไว้ที่ตัวเครื่องหลักแล้ว)
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">
+                    วันที่ได้มา (Acquisition Date)
+                  </label>
+                  <input
+                    type="date"
+                    value={acquisitionDate}
+                    onChange={(e) => setAcquisitionDate(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">
+                    ราคาต่อหน่วย (บาท)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={purchasePrice}
+                    onChange={(e) => setPurchasePrice(e.target.value)}
+                    placeholder="เช่น 22000"
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">
+                    วิธีการได้มา
+                  </label>
+                  <input
+                    type="text"
+                    value={acquisitionMethod}
+                    onChange={(e) => setAcquisitionMethod(e.target.value)}
+                    placeholder="เช่น เฉพาะเจาะจง, e-bidding"
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">รูปภาพหน้างาน</label>
