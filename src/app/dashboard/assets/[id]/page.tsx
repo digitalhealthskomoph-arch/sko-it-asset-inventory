@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, use } from 'react';
 import { supabase } from '@/lib/supabase';
+import { staffFetch } from '@/lib/api-client';
 import { 
   Camera, Save, Loader2, X, Trash2, ArrowLeft, Sparkles, 
   AlertTriangle, AlertCircle, CheckCircle2, Clock, Wrench, 
@@ -10,6 +11,7 @@ import {
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getSafeImageUrl } from '@/lib/image-url';
+import RemoteConnectCard from './RemoteConnectCard';
 import {
   parseProcurementMeta,
   serializeProcurementMeta,
@@ -168,7 +170,7 @@ export default function EditAssetPage({ params }: { params: Promise<{ id: string
       const formData = new FormData();
       formData.append('image', file);
 
-      const response = await fetch('/api/analyze-image', {
+      const response = await staffFetch('/api/analyze-image', {
         method: 'POST',
         body: formData,
       });
@@ -235,7 +237,7 @@ export default function EditAssetPage({ params }: { params: Promise<{ id: string
         const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
         const filePath = `survey/${fileName}`; 
 
-        const res = await fetch('/api/upload', {
+        const res = await staffFetch('/api/upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -244,13 +246,16 @@ export default function EditAssetPage({ params }: { params: Promise<{ id: string
           }),
         });
 
-        if (!res.ok) throw new Error('ไม่สามารถเตรียมการอัปโหลดรูปภาพได้');
+        if (!res.ok) {
+          const err = await res.json().catch(() => null);
+          throw new Error(`ไม่สามารถเตรียมการอัปโหลดรูปภาพได้ (${err?.error || res.status})`);
+        }
 
-        const { presignedUrl, publicUrl } = await res.json();
+        const { presignedUrl, publicUrl, contentType } = await res.json();
 
         const uploadRes = await fetch(presignedUrl, {
           method: 'PUT',
-          headers: { 'Content-Type': imageFile.type },
+          headers: { 'Content-Type': contentType || imageFile.type },
           body: imageFile,
         });
 
@@ -348,6 +353,8 @@ export default function EditAssetPage({ params }: { params: Promise<{ id: string
           ลบรายการ
         </button>
       </div>
+
+      <RemoteConnectCard ipAddress={ipAddress} label={assetNumber || assetName} />
 
       {/* AI Scanner Banner */}
       <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-center gap-4 justify-between shadow-sm">

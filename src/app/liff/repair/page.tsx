@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { Loader2, Wrench, Upload } from 'lucide-react';
 import Link from 'next/link';
 import liff from '@line/liff';
+import { LIFF_ID, liffFetch } from '@/lib/api-client';
 
 type Department = { id: string; name: string };
 type Personnel = { id: string; first_name: string; last_name: string };
@@ -45,7 +46,7 @@ export default function RepairFormPage() {
       }
       // 2. Initialize LIFF directly
       try {
-        await liff.init({ liffId: '2008591648-wGRKxePd' });
+        await liff.init({ liffId: LIFF_ID });
         if (liff.isLoggedIn()) {
           const profile = await liff.getProfile();
           setLineUserId(profile.userId);
@@ -81,12 +82,8 @@ export default function RepairFormPage() {
       return;
     }
     const fetchPersonnel = async () => {
-      const { data } = await supabase
-        .from('personnel')
-        .select('id, first_name, last_name')
-        .eq('department_id', selectedDept)
-        .order('first_name');
-      if (data) setPersonnel(data);
+      const res = await fetch(`/api/liff/options?department_id=${encodeURIComponent(selectedDept)}`);
+      if (res.ok) setPersonnel((await res.json()).personnel);
     };
     fetchPersonnel();
   }, [selectedDept]);
@@ -100,11 +97,8 @@ export default function RepairFormPage() {
       return;
     }
     const fetchAssets = async () => {
-      const { data } = await supabase
-        .from('assets')
-        .select('id, asset_number, brand_model, category_id')
-        .eq('personnel_id', selectedPersonnel);
-      if (data) setAssets(data);
+      const res = await fetch(`/api/liff/options?personnel_id=${encodeURIComponent(selectedPersonnel)}`);
+      if (res.ok) setAssets((await res.json()).assets);
       // Auto-reset category and asset when personnel changes
       setSelectedCategory('');
       setSelectedAsset('');
@@ -123,66 +117,73 @@ export default function RepairFormPage() {
     
     setSubmitting(true);
     
-    // Generate simple ticket number (e.g. IT-250001)
-    // In production, might want a safer sequence generation in DB.
-    const year = new Date().getFullYear() + 543; // Thai year
-    const random = Math.floor(Math.random() * 9000) + 1000;
-    const generatedTicket = `IT-${year.toString().slice(2)}${random}`;
+    let imageKey: string | null = null;
 
-    let imageUrl = null;
-    
-    // Upload file to R2 if selected
+    // Upload file to R2 if selected (the server picks the file name)
     if (file) {
       try {
-        const fileExt = file.name.split('.').pop();
-        const fileName = `repair_${generatedTicket}_${Date.now()}.${fileExt}`;
-        
         // 1. Get presigned URL from API
         const res = await fetch('/api/upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            filename: fileName,
+            folder: 'repair',
             contentType: file.type,
+            filename: file.name,
           }),
         });
-        
+
         if (res.ok) {
-          const { presignedUrl, publicUrl } = await res.json();
-          
+          const { presignedUrl, key, contentType } = await res.json();
+
           // 2. Upload directly to R2
           const uploadRes = await fetch(presignedUrl, {
             method: 'PUT',
             body: file,
-            headers: { 'Content-Type': file.type },
+            headers: { 'Content-Type': contentType || file.type },
           });
-          
+
           if (uploadRes.ok) {
-            imageUrl = publicUrl;
+            imageKey = key;
           } else {
             console.error('Failed to upload image to R2');
           }
+        } else {
+          const err = await res.json().catch(() => null);
+          if (err?.error) alert(err.error);
         }
       } catch (err) {
         console.error('Error uploading image:', err);
       }
     }
 
-    const { error } = await supabase.from('repair_tickets').insert({
-      ticket_number: generatedTicket,
-      department_id: selectedDept,
-      personnel_id: selectedPersonnel,
-      asset_id: selectedAsset || null,
-      issue_type: issueType,
-      description: description,
-      image_url: imageUrl,
-      line_user_id: lineUserId,
-      status: 'รอรับเรื่อง'
-    });
+    // The server validates the data, assigns the ticket number and notifies the technician group.
+    let generatedTicket = '';
+    let errorMessage: string | null = null;
+    try {
+      const res = await liffFetch('/api/liff/tickets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          department_id: selectedDept,
+          personnel_id: selectedPersonnel,
+          asset_id: selectedAsset || null,
+          issue_type: issueType,
+          description,
+          image_key: imageKey,
+        }),
+      });
+      const result = await res.json().catch(() => ({}));
+      if (res.ok && result.ticketNumber) generatedTicket = result.ticketNumber;
+      else errorMessage = result.error || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล';
+    } catch (err) {
+      console.error(err);
+      errorMessage = 'เกิดข้อผิดพลาดในการเชื่อมต่อเครือข่าย';
+    }
 
     setSubmitting(false);
 
-    if (!error) {
+    if (!errorMessage) {
       setTicketNumber(generatedTicket);
       setSuccess(true);
 
@@ -194,30 +195,8 @@ export default function RepairFormPage() {
           localStorage.setItem('my_ticket_numbers', JSON.stringify(saved.slice(0, 15)));
         }
       } catch (e) {}
-
-      // Send Push notification to LINE Technician Group
-      const deptName = departments.find(d => d.id === selectedDept)?.name || '';
-      const person = personnel.find(p => p.id === selectedPersonnel);
-      const requesterName = person ? `${person.first_name} ${person.last_name}` : '';
-      const asset = assets.find(a => a.id === selectedAsset);
-      const assetInfo = asset ? `${asset.asset_number} (${asset.brand_model})` : '';
-
-      fetch('/api/notify-technician', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ticketNumber: generatedTicket,
-          requesterName,
-          department: deptName,
-          issueType,
-          assetInfo,
-          description,
-          imageUrl,
-        }),
-      }).catch(err => console.error('Notify technician error:', err));
     } else {
-      alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
-      console.error(error);
+      alert(errorMessage);
     }
   };
 

@@ -3,8 +3,12 @@ import { createClient } from '@supabase/supabase-js';
 // ==========================================
 // 1. ตั้งค่า Supabase (ใช้ Service Role Key เพื่อให้อัปเดต DB ได้ทั้งหมด)
 // ==========================================
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://jxvnpqxvbnyxcvodggkw.supabase.co'; 
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''; 
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (!SUPABASE_URL || !SUPABASE_KEY) {
+  console.error('❌ ต้องตั้งค่า NEXT_PUBLIC_SUPABASE_URL และ SUPABASE_SERVICE_ROLE_KEY (เช่น node --env-file=.env.local update-db-urls.mjs)');
+  process.exit(1);
+}
 
 const R2_DOMAIN = process.env.NEXT_PUBLIC_R2_DOMAIN || 'https://assets.mophsk.online';
 

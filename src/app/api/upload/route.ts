@@ -1,71 +1,67 @@
+import { randomUUID } from 'crypto';
 import { NextResponse } from 'next/server';
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { errorResponse, isStaffRequest, requireStaff } from '@/lib/api-auth';
+import { getR2Client, r2Bucket, publicUrlForKey, IMAGE_TYPES, resolveImageType } from '@/lib/r2';
 
-const s3Client = new S3Client({
-  region: 'auto',
-  endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-  credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
-  },
-});
+// Folders each caller may write to. The server picks the object name, so callers
+// can never overwrite an existing file.
+const STAFF_FOLDERS = ['survey', 'repair', 'assets'];
 
 export async function POST(request: Request) {
   try {
-    const { filename, contentType } = await request.json();
-
-    if (!filename || !contentType) {
-      return NextResponse.json({ error: 'Missing filename or contentType' }, { status: 400 });
+    const body = await request.json().catch(() => ({}));
+    const contentType = resolveImageType(body.contentType, body.filename);
+    const ext = contentType && IMAGE_TYPES[contentType];
+    if (!contentType || !ext) {
+      return NextResponse.json({ error: 'อนุญาตเฉพาะไฟล์รูปภาพ (JPG, PNG, WEBP, GIF, HEIC)' }, { status: 400 });
     }
 
+    // Anonymous callers (the LIFF repair form) may only write to repair/.
+    const requested = String(body.folder || body.filename || '').split('/')[0];
+    const staff = await isStaffRequest(request);
+    const folder = staff && STAFF_FOLDERS.includes(requested) ? requested : 'repair';
+    const key = `${folder}/${randomUUID()}.${ext}`;
+
     const command = new PutObjectCommand({
-      Bucket: process.env.R2_BUCKET,
-      Key: filename,
+      Bucket: r2Bucket(),
+      Key: key,
       ContentType: contentType,
     });
 
-    // สร้าง URL สำหรับให้หน้าบ้านใช้อัปโหลดไฟล์โดยตรง (หมดอายุใน 5 นาที)
-    const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 300 });
+    // Presigned URL for a direct browser upload, valid for 5 minutes
+    const presignedUrl = await getSignedUrl(getR2Client(), command, { expiresIn: 300 });
 
-    const rawDomain = process.env.NEXT_PUBLIC_R2_DOMAIN || '';
-    const r2Domain = (rawDomain && !rawDomain.includes('assets.mophsk.online'))
-      ? rawDomain
-      : 'https://pub-0645b35588f444db916ede067d20d7e2.r2.dev';
-    const publicUrl = `${r2Domain}/${filename}`;
-
-    return NextResponse.json({ presignedUrl, publicUrl });
+    // The PUT must send exactly this Content-Type or R2 rejects the signature.
+    return NextResponse.json({ presignedUrl, publicUrl: publicUrlForKey(key), key, contentType });
   } catch (error) {
-    console.error('Error generating presigned URL:', error);
-    return NextResponse.json({ error: 'Failed to generate presigned URL' }, { status: 500 });
+    return errorResponse(error, 'เซิร์ฟเวอร์ยังตั้งค่าที่เก็บรูปภาพ (R2) ไม่ครบ หรือเชื่อมต่อไม่ได้');
   }
 }
 
 export async function DELETE(request: Request) {
   try {
-    const { fileUrl } = await request.json();
+    await requireStaff(request);
 
+    const { fileUrl } = await request.json();
     if (!fileUrl) {
       return NextResponse.json({ error: 'Missing fileUrl' }, { status: 400 });
     }
 
     // Extract filename/key from public URL or relative path
-    let key = fileUrl;
-    if (fileUrl.includes('://')) {
-      const urlObj = new URL(fileUrl);
-      key = decodeURIComponent(urlObj.pathname.replace(/^\//, ''));
+    let key = String(fileUrl);
+    if (key.includes('://')) {
+      key = decodeURIComponent(new URL(key).pathname.replace(/^\//, ''));
+    }
+    if (!key || key.includes('..')) {
+      return NextResponse.json({ error: 'Invalid file key' }, { status: 400 });
     }
 
-    const command = new DeleteObjectCommand({
-      Bucket: process.env.R2_BUCKET,
-      Key: key,
-    });
-
-    await s3Client.send(command);
+    await getR2Client().send(new DeleteObjectCommand({ Bucket: r2Bucket(), Key: key }));
 
     return NextResponse.json({ success: true, deletedKey: key });
   } catch (error) {
-    console.error('Error deleting file from R2:', error);
-    return NextResponse.json({ error: 'Failed to delete file' }, { status: 500 });
+    return errorResponse(error, 'Failed to delete file');
   }
 }

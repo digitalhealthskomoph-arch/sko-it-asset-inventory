@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { errorResponse, requireStaff } from '@/lib/api-auth';
 
 // Initialize Gemini API
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 export async function POST(req: NextRequest) {
   try {
+    await requireStaff(req);
+
     if (!process.env.GEMINI_API_KEY) {
       return NextResponse.json({ error: 'GEMINI_API_KEY is not configured.' }, { status: 500 });
     }
@@ -15,6 +18,10 @@ export async function POST(req: NextRequest) {
     
     if (!file) {
       return NextResponse.json({ error: 'No image provided.' }, { status: 400 });
+    }
+
+    if (!file.type.startsWith('image/') || file.size > 5 * 1024 * 1024) {
+      return NextResponse.json({ error: 'รองรับเฉพาะไฟล์รูปภาพขนาดไม่เกิน 5MB' }, { status: 400 });
     }
 
     // Convert file to base64
@@ -67,8 +74,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(parsedData);
     
-  } catch (error: any) {
-    console.error('Error in analyze-image:', error);
-    return NextResponse.json({ error: error.message || 'Failed to analyze image' }, { status: 500 });
+  } catch (error) {
+    return errorResponse(error, 'ไม่สามารถวิเคราะห์รูปภาพได้');
   }
 }

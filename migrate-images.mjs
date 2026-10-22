@@ -5,21 +5,26 @@ import { Buffer } from 'buffer';
 // ==========================================
 // 1. ตั้งค่า Supabase
 // ==========================================
-const SUPABASE_URL = 'https://jxvnpqxvbnyxcvodggkw.supabase.co'; // ดึงจาก URL ในรูป
-// ⚠️ ข้อควรระวัง: ปกติ Service Role Key ของ Supabase จะขึ้นต้นด้วย eyJ... 
-// หากรันแล้ว Error ให้ลองกลับไป Copy Service Role Key มาใหม่นะครับ
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp4dm5wcXh2Ym55eGN2b2RnZ2t3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NTk2NzE4NywiZXhwIjoyMTAxNTQzMTg3fQ.oVFpY_fgE9i5LH0SsLX7lRadPob0cjJBocXtXgLUc1U'; 
+// อ่านค่าลับจาก environment เท่านั้น ห้ามใส่ key ลงในไฟล์นี้
+// ตัวอย่าง: node --env-file=.env.local migrate-images.mjs
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const SUPABASE_BUCKET = 'asset-images';
 
 // ==========================================
 // 2. ตั้งค่า Cloudflare R2
 // ==========================================
-const R2_ACCOUNT_ID = '138823bdd5164bcdb49dc744afb0f871';
-const R2_ACCESS_KEY_ID = 'fa0d3ea82509fdf710e16137c1afd8c5';
-const R2_SECRET_ACCESS_KEY = '1d57f935c0df0cffb8eedf23170064a3547708ffbf3f9b83e0ed068aae5efc3b';
-const R2_BUCKET = 'my-app-assets'; // ชื่อ Bucket ใน R2 ที่เราสร้างไว้ตอนแรก (แก้ให้ตรงถ้าเปลี่ยนชื่อ)
+const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID;
+const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID;
+const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY;
+const R2_BUCKET = process.env.R2_BUCKET || 'my-app-assets'; // ชื่อ Bucket ใน R2 ที่เราสร้างไว้ตอนแรก (แก้ให้ตรงถ้าเปลี่ยนชื่อ)
 
 // ==========================================
+
+if (!SUPABASE_URL || !SUPABASE_KEY || !R2_ACCOUNT_ID || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY) {
+  console.error('❌ ต้องตั้งค่า NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY');
+  process.exit(1);
+}
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 

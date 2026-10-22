@@ -4,11 +4,12 @@ import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
-import { LayoutDashboard, Users, Laptop, LogOut, Menu, X, QrCode, Wrench, PackageX } from 'lucide-react';
+import { LayoutDashboard, Users, Laptop, LogOut, Menu, X, QrCode, Wrench, PackageX, Headset } from 'lucide-react';
 
 const navigation = [
   { name: 'ภาพรวม (Dashboard)', href: '/dashboard', icon: LayoutDashboard },
   { name: 'งานแจ้งซ่อม (Helpdesk)', href: '/dashboard/tickets', icon: Wrench },
+  { name: 'คำขอรีโมท (Remote Help)', href: '/dashboard/remote-help', icon: Headset },
   { name: 'สำรวจครุภัณฑ์ (Survey)', href: '/dashboard/survey', icon: QrCode },
   { name: 'รายการครุภัณฑ์ (Assets)', href: '/dashboard/assets', icon: Laptop },
   { name: 'ขอจำหน่ายพัสดุ (Disposal)', href: '/dashboard/disposal', icon: PackageX },
@@ -27,9 +28,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         router.push('/');
-      } else {
-        setLoading(false);
+        return;
       }
+      // Only accounts in staff_users may use the dashboard (RLS enforces the same on the data).
+      const { data: staff } = await supabase
+        .from('staff_users')
+        .select('user_id')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+      if (!staff) {
+        await supabase.auth.signOut();
+        alert('บัญชีนี้ไม่มีสิทธิ์เข้าใช้งานระบบ');
+        router.push('/');
+        return;
+      }
+      setLoading(false);
     };
     checkUser();
   }, [router]);

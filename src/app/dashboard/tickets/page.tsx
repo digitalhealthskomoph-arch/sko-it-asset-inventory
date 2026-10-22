@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { staffFetch } from '@/lib/api-client';
 import { Loader2, Search, Edit, AlertCircle, Clock, CheckCircle, ListTodo, Image as ImageIcon, X, Star, Trash2, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import { getSafeImageUrl } from '@/lib/image-url';
@@ -171,7 +172,7 @@ export default function TicketsPage() {
     // 1. Delete image from Cloudflare R2 storage if exists
     if (ticket.image_url) {
       try {
-        await fetch('/api/upload', {
+        await staffFetch('/api/upload', {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ fileUrl: ticket.image_url }),

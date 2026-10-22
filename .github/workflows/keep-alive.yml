@@ -37,7 +37,7 @@ jobs:
         run: |
           echo "=== Pinging Supabase REST API directly ==="
           SUPABASE_URL="https://jxvnpqxvbnyxcvodggkw.supabase.co"
-          SUPABASE_KEY="${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_avrMiGyieFTbqkFnm7hEag_r_ILx5Sy' }}"
+          SUPABASE_KEY="${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}"
           
           RESPONSE=$(curl -s -w "\n%{http_code}" --max-time 30 \
             -X GET "$SUPABASE_URL/rest/v1/departments?select=id&limit=1" \

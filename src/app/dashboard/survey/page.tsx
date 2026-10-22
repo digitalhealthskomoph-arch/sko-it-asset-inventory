@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+import { staffFetch } from '@/lib/api-client';
 import { Search, Loader2, Plus, MonitorSmartphone, Camera, Save, X, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -62,7 +63,7 @@ export default function SurveyPage() {
       const formData = new FormData();
       formData.append('image', file);
 
-      const response = await fetch('/api/analyze-image', {
+      const response = await staffFetch('/api/analyze-image', {
         method: 'POST',
         body: formData,
       });
@@ -163,7 +164,7 @@ export default function SurveyPage() {
         const filePath = `survey/${fileName}`; // Put in 'survey' folder
 
         // ขอ Presigned URL จาก API ของเรา
-        const res = await fetch('/api/upload', {
+        const res = await staffFetch('/api/upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -173,15 +174,16 @@ export default function SurveyPage() {
         });
 
         if (!res.ok) {
-          throw new Error('ไม่สามารถเตรียมการอัปโหลดรูปภาพได้');
+          const err = await res.json().catch(() => null);
+          throw new Error(`ไม่สามารถเตรียมการอัปโหลดรูปภาพได้ (${err?.error || res.status})`);
         }
 
-        const { presignedUrl, publicUrl } = await res.json();
+        const { presignedUrl, publicUrl, contentType } = await res.json();
 
         // อัปโหลดไฟล์ไปที่ R2 โดยตรงผ่าน Presigned URL
         const uploadRes = await fetch(presignedUrl, {
           method: 'PUT',
-          headers: { 'Content-Type': imageFile.type },
+          headers: { 'Content-Type': contentType || imageFile.type },
           body: imageFile,
         });
 
