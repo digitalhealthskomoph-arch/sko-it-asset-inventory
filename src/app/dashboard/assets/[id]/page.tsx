@@ -11,6 +11,7 @@ import {
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getSafeImageUrl } from '@/lib/image-url';
+import RemoteConnectCard from './RemoteConnectCard';
 import {
   parseProcurementMeta,
   serializeProcurementMeta,
@@ -349,6 +350,8 @@ export default function EditAssetPage({ params }: { params: Promise<{ id: string
           ลบรายการ
         </button>
       </div>
+
+      <RemoteConnectCard ipAddress={ipAddress} label={assetNumber || assetName} />
 
       {/* AI Scanner Banner */}
       <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-center gap-4 justify-between shadow-sm">
