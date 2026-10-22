@@ -174,7 +174,8 @@ export default function SurveyPage() {
         });
 
         if (!res.ok) {
-          throw new Error('ไม่สามารถเตรียมการอัปโหลดรูปภาพได้');
+          const err = await res.json().catch(() => null);
+          throw new Error(`ไม่สามารถเตรียมการอัปโหลดรูปภาพได้ (${err?.error || res.status})`);
         }
 
         const { presignedUrl, publicUrl } = await res.json();

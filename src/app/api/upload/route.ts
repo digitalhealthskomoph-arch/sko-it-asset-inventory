@@ -35,7 +35,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ presignedUrl, publicUrl: publicUrlForKey(key), key });
   } catch (error) {
-    return errorResponse(error, 'Failed to generate presigned URL');
+    return errorResponse(error, 'เซิร์ฟเวอร์ยังตั้งค่าที่เก็บรูปภาพ (R2) ไม่ครบ หรือเชื่อมต่อไม่ได้');
   }
 }
 

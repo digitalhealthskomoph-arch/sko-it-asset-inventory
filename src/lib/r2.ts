@@ -38,4 +38,8 @@ export const IMAGE_TYPES: Record<string, string> = {
   'image/webp': 'webp',
   'image/gif': 'gif',
   'image/heic': 'heic',
+  'image/heif': 'heic',
+  'image/jpg': 'jpg',
+  'image/pjpeg': 'jpg',
+  'image/bmp': 'bmp',
 };

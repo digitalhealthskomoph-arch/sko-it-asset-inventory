@@ -246,7 +246,10 @@ export default function EditAssetPage({ params }: { params: Promise<{ id: string
           }),
         });
 
-        if (!res.ok) throw new Error('ไม่สามารถเตรียมการอัปโหลดรูปภาพได้');
+        if (!res.ok) {
+          const err = await res.json().catch(() => null);
+          throw new Error(`ไม่สามารถเตรียมการอัปโหลดรูปภาพได้ (${err?.error || res.status})`);
+        }
 
         const { presignedUrl, publicUrl } = await res.json();
 

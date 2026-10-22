@@ -90,7 +90,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'กรุณากรอกรายละเอียดอาการ (ไม่เกิน 2000 ตัวอักษร)' }, { status: 400 });
     }
     // Only accept images uploaded through /api/upload for repair tickets.
-    if (imageKey && !/^repair\/[0-9a-f-]{36}\.(jpg|png|webp|gif|heic)$/.test(imageKey)) {
+    if (imageKey && !/^repair\/[0-9a-f-]{36}\.(jpg|png|webp|gif|heic|bmp)$/.test(imageKey)) {
       return NextResponse.json({ error: 'ไฟล์รูปภาพไม่ถูกต้อง' }, { status: 400 });
     }
 
