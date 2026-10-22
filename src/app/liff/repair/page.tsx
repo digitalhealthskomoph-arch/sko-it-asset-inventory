@@ -129,17 +129,18 @@ export default function RepairFormPage() {
           body: JSON.stringify({
             folder: 'repair',
             contentType: file.type,
+            filename: file.name,
           }),
         });
 
         if (res.ok) {
-          const { presignedUrl, key } = await res.json();
+          const { presignedUrl, key, contentType } = await res.json();
 
           // 2. Upload directly to R2
           const uploadRes = await fetch(presignedUrl, {
             method: 'PUT',
             body: file,
-            headers: { 'Content-Type': file.type },
+            headers: { 'Content-Type': contentType || file.type },
           });
 
           if (uploadRes.ok) {

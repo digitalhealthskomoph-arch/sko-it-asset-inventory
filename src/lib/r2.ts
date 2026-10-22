@@ -43,3 +43,27 @@ export const IMAGE_TYPES: Record<string, string> = {
   'image/pjpeg': 'jpg',
   'image/bmp': 'bmp',
 };
+
+const TYPES_BY_EXT: Record<string, string> = {
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  jfif: 'image/jpeg',
+  png: 'image/png',
+  webp: 'image/webp',
+  gif: 'image/gif',
+  heic: 'image/heic',
+  heif: 'image/heif',
+  bmp: 'image/bmp',
+};
+
+/**
+ * The image content type to sign for. Browsers report an empty type for files they
+ * don't recognise (HEIC on Windows, for one), so fall back to the file extension.
+ */
+export function resolveImageType(contentType: unknown, filename: unknown): string | null {
+  const type = String(contentType || '').toLowerCase();
+  if (IMAGE_TYPES[type]) return type;
+  if (type && type !== 'application/octet-stream') return null;
+  const ext = String(filename || '').split('.').pop()?.toLowerCase() || '';
+  return TYPES_BY_EXT[ext] || null;
+}

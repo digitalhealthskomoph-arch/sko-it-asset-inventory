@@ -251,11 +251,11 @@ export default function EditAssetPage({ params }: { params: Promise<{ id: string
           throw new Error(`ไม่สามารถเตรียมการอัปโหลดรูปภาพได้ (${err?.error || res.status})`);
         }
 
-        const { presignedUrl, publicUrl } = await res.json();
+        const { presignedUrl, publicUrl, contentType } = await res.json();
 
         const uploadRes = await fetch(presignedUrl, {
           method: 'PUT',
-          headers: { 'Content-Type': imageFile.type },
+          headers: { 'Content-Type': contentType || imageFile.type },
           body: imageFile,
         });
 

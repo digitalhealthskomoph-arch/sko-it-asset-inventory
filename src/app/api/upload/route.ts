@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { errorResponse, isStaffRequest, requireStaff } from '@/lib/api-auth';
-import { getR2Client, r2Bucket, publicUrlForKey, IMAGE_TYPES } from '@/lib/r2';
+import { getR2Client, r2Bucket, publicUrlForKey, IMAGE_TYPES, resolveImageType } from '@/lib/r2';
 
 // Folders each caller may write to. The server picks the object name, so callers
 // can never overwrite an existing file.
@@ -12,9 +12,9 @@ const STAFF_FOLDERS = ['survey', 'repair', 'assets'];
 export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => ({}));
-    const contentType = String(body.contentType || '');
-    const ext = IMAGE_TYPES[contentType];
-    if (!ext) {
+    const contentType = resolveImageType(body.contentType, body.filename);
+    const ext = contentType && IMAGE_TYPES[contentType];
+    if (!contentType || !ext) {
       return NextResponse.json({ error: 'อนุญาตเฉพาะไฟล์รูปภาพ (JPG, PNG, WEBP, GIF, HEIC)' }, { status: 400 });
     }
 
@@ -33,7 +33,8 @@ export async function POST(request: Request) {
     // Presigned URL for a direct browser upload, valid for 5 minutes
     const presignedUrl = await getSignedUrl(getR2Client(), command, { expiresIn: 300 });
 
-    return NextResponse.json({ presignedUrl, publicUrl: publicUrlForKey(key), key });
+    // The PUT must send exactly this Content-Type or R2 rejects the signature.
+    return NextResponse.json({ presignedUrl, publicUrl: publicUrlForKey(key), key, contentType });
   } catch (error) {
     return errorResponse(error, 'เซิร์ฟเวอร์ยังตั้งค่าที่เก็บรูปภาพ (R2) ไม่ครบ หรือเชื่อมต่อไม่ได้');
   }

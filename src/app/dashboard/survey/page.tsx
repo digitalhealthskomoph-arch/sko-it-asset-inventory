@@ -178,12 +178,12 @@ export default function SurveyPage() {
           throw new Error(`ไม่สามารถเตรียมการอัปโหลดรูปภาพได้ (${err?.error || res.status})`);
         }
 
-        const { presignedUrl, publicUrl } = await res.json();
+        const { presignedUrl, publicUrl, contentType } = await res.json();
 
         // อัปโหลดไฟล์ไปที่ R2 โดยตรงผ่าน Presigned URL
         const uploadRes = await fetch(presignedUrl, {
           method: 'PUT',
-          headers: { 'Content-Type': imageFile.type },
+          headers: { 'Content-Type': contentType || imageFile.type },
           body: imageFile,
         });
 
