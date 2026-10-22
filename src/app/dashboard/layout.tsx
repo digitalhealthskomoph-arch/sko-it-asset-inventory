@@ -4,11 +4,12 @@ import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
-import { LayoutDashboard, Users, Laptop, LogOut, Menu, X, QrCode, Wrench, PackageX } from 'lucide-react';
+import { LayoutDashboard, Users, Laptop, LogOut, Menu, X, QrCode, Wrench, PackageX, Headset } from 'lucide-react';
 
 const navigation = [
   { name: 'ภาพรวม (Dashboard)', href: '/dashboard', icon: LayoutDashboard },
   { name: 'งานแจ้งซ่อม (Helpdesk)', href: '/dashboard/tickets', icon: Wrench },
+  { name: 'คำขอรีโมท (Remote Help)', href: '/dashboard/remote-help', icon: Headset },
   { name: 'สำรวจครุภัณฑ์ (Survey)', href: '/dashboard/survey', icon: QrCode },
   { name: 'รายการครุภัณฑ์ (Assets)', href: '/dashboard/assets', icon: Laptop },
   { name: 'ขอจำหน่ายพัสดุ (Disposal)', href: '/dashboard/disposal', icon: PackageX },

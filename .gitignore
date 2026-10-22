@@ -45,3 +45,6 @@ next-env.d.ts
 *.xls
 *.csv
 *.local.sql
+
+# built desktop app (distribute the exe, don't commit it)
+tools/sko-help/*.exe

@@ -79,6 +79,30 @@ export function lineUserFromRequest(req: Request): Promise<string | null> {
   return verifyLineAccessToken(req.headers.get('x-line-access-token'));
 }
 
+/** Public IP of the caller as seen by Vercel (first hop of x-forwarded-for). */
+export function clientIp(req: Request): string {
+  const forwarded = req.headers.get('x-forwarded-for') || '';
+  return (forwarded.split(',')[0] || req.headers.get('x-real-ip') || '').trim();
+}
+
+/**
+ * Allows the request only from the office's public IP(s), listed comma-separated in
+ * OFFICE_PUBLIC_IPS. Used by the desktop help app, which has no user login.
+ */
+export function requireOfficeNetwork(req: Request): void {
+  const allowed = (process.env.OFFICE_PUBLIC_IPS || '')
+    .split(',')
+    .map((ip) => ip.trim())
+    .filter(Boolean);
+  if (allowed.length === 0) {
+    console.error('OFFICE_PUBLIC_IPS is not configured');
+    throw new AuthError('ระบบยังไม่ได้ตั้งค่าเครือข่ายสำนักงาน กรุณาติดต่อเจ้าหน้าที่ IT', 503);
+  }
+  if (!allowed.includes(clientIp(req))) {
+    throw new AuthError('ใช้งานได้เฉพาะจากเครือข่ายภายในสำนักงานเท่านั้น', 403);
+  }
+}
+
 /** Converts thrown errors into a JSON response without leaking internals. */
 export function errorResponse(err: unknown, fallback = 'เกิดข้อผิดพลาดในระบบ'): NextResponse {
   if (err instanceof AuthError) {

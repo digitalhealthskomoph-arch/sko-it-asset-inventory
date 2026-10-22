@@ -1,17 +1,15 @@
-import { randomInt } from 'crypto';
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { errorResponse, lineUserFromRequest, UUID_RE } from '@/lib/api-auth';
 import { notifyTechnicianGroup } from '@/lib/line-notify';
 import { publicUrlForKey } from '@/lib/r2';
+import { ISSUE_TYPES, createRepairTicket, loadRequester } from '@/lib/tickets';
 
 // Columns a requester may see about a ticket (no line_user_id, no internal ids of other rows).
 const PUBLIC_TICKET_COLUMNS =
   'id, ticket_number, issue_type, description, status, technician_name, resolution_notes, rating, feedback, created_at, closed_at, personnel (first_name, last_name), assets (asset_number, brand_model)';
 
 const TICKET_NUMBER_RE = /^IT-\d{6,10}$/;
-// Must match the <option> values in src/app/liff/repair/page.tsx
-const ISSUE_TYPES = ['Hardware', 'Software', 'Network', 'Plan-D', 'ช่วยดึงข้อมูล', 'Other'];
 
 function normalizeTicketNumber(raw: string): string | null {
   const value = raw.trim().toUpperCase();
@@ -99,12 +97,8 @@ export async function POST(req: Request) {
     const admin = getSupabaseAdmin();
 
     // The requester must belong to the chosen department, and the asset to the requester.
-    const { data: person } = await admin
-      .from('personnel')
-      .select('id, first_name, last_name, department_id, departments (name)')
-      .eq('id', personnelId)
-      .maybeSingle();
-    if (!person || person.department_id !== departmentId) {
+    const person = await loadRequester(admin, personnelId, departmentId);
+    if (!person) {
       return NextResponse.json({ error: 'ข้อมูลผู้แจ้งไม่ตรงกับกลุ่มงาน' }, { status: 400 });
     }
 
@@ -125,34 +119,21 @@ export async function POST(req: Request) {
     const lineUserId = await lineUserFromRequest(req);
     const imageUrl = imageKey ? publicUrlForKey(imageKey) : null;
 
-    const thaiYear = (new Date().getFullYear() + 543).toString().slice(2);
-    let ticketNumber = '';
-    let inserted = false;
-    for (let attempt = 0; attempt < 5 && !inserted; attempt++) {
-      ticketNumber = `IT-${thaiYear}${randomInt(0, 1_000_000).toString().padStart(6, '0')}`;
-      const { error } = await admin.from('repair_tickets').insert({
-        ticket_number: ticketNumber,
-        department_id: departmentId,
-        personnel_id: personnelId,
-        asset_id: assetId,
-        issue_type: issueType,
-        description,
-        image_url: imageUrl,
-        line_user_id: lineUserId,
-        status: 'รอรับเรื่อง',
-      });
-      if (!error) inserted = true;
-      else if (error.code !== '23505') throw error; // 23505 = duplicate ticket_number, retry
-    }
-    if (!inserted) throw new Error('Could not allocate a unique ticket number');
+    const { ticketNumber } = await createRepairTicket(admin, {
+      department_id: departmentId,
+      personnel_id: personnelId,
+      asset_id: assetId,
+      issue_type: issueType,
+      description,
+      image_url: imageUrl,
+      line_user_id: lineUserId,
+    });
 
-    const dept = person.departments as { name?: string } | { name?: string }[] | null;
-    const deptName = (Array.isArray(dept) ? dept[0]?.name : dept?.name) || '';
     try {
       await notifyTechnicianGroup({
         ticketNumber,
         requesterName: `${person.first_name} ${person.last_name}`,
-        department: deptName,
+        department: person.departmentName,
         issueType,
         assetInfo,
         description,

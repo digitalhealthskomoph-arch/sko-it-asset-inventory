@@ -40,7 +40,12 @@ foreach ($cidr in $ItSubnet) {
 Set-ItemProperty 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name fDenyTSConnections -Value 0
 Set-ItemProperty 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name UserAuthentication -Value 1
 
-# 2. Offer Remote Assistance (equivalent to the Group Policy setting "Configure Offer Remote Assistance")
+# 2a. Allow Remote Assistance invitations (used by the SKO Help app: the user asks for help)
+$ra = 'HKLM:\SYSTEM\CurrentControlSet\Control\Remote Assistance'
+Set-ItemProperty $ra -Name fAllowToGetHelp -Value 1 -Type DWord
+Set-ItemProperty $ra -Name fAllowFullControl -Value 1 -Type DWord
+
+# 2b. Offer Remote Assistance (equivalent to the Group Policy setting "Configure Offer Remote Assistance")
 $ts = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services'
 New-Item -Path $ts -Force | Out-Null
 Set-ItemProperty $ts -Name fAllowUnsolicited -Value 1 -Type DWord

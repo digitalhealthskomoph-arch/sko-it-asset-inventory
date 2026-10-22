@@ -21,11 +21,21 @@ export type NewTicketNotice = {
   assetInfo: string;
   description: string;
   imageUrl: string | null;
+  /** Header line and button target; default to the normal "new repair ticket" message. */
+  headline?: string;
+  manageUrl?: string;
+  /** Extra label/value rows, e.g. the computer name for a remote help request. */
+  extraRows?: { label: string; value: string }[];
 };
+
+const DEFAULT_MANAGE_URL = 'https://sko-it-asset-inventory.vercel.app/dashboard/tickets';
 
 /** Pushes a "new repair ticket" message to the technicians' LINE group. Server-side only. */
 export async function notifyTechnicianGroup(notice: NewTicketNotice): Promise<void> {
   const { ticketNumber, requesterName, department, issueType, assetInfo, description, imageUrl } = notice;
+  const headline = notice.headline || '🔔 มีการแจ้งซ่อมใหม่ (IT Helpdesk)';
+  const manageUrl = notice.manageUrl || DEFAULT_MANAGE_URL;
+  const extraRows = notice.extraRows || [];
 
   if (!LINE_ACCESS_TOKEN || !ADMIN_LINE_GROUP_ID) {
     console.error('Missing LINE_CHANNEL_ACCESS_TOKEN or ADMIN_LINE_GROUP_ID');
@@ -55,7 +65,7 @@ export async function notifyTechnicianGroup(notice: NewTicketNotice): Promise<vo
       contents: [
         {
           type: 'text',
-          text: '🔔 มีการแจ้งซ่อมใหม่ (IT Helpdesk)',
+          text: headline,
           weight: 'bold',
           color: '#38BDF8',
           size: 'sm'
@@ -108,6 +118,14 @@ export async function notifyTechnicianGroup(notice: NewTicketNotice): Promise<vo
             { type: 'text', text: assetInfo, size: 'sm', color: '#334155', flex: 5, wrap: true }
           ]
         }] : []),
+        ...extraRows.map((row) => ({
+          type: 'box',
+          layout: 'horizontal',
+          contents: [
+            { type: 'text', text: `${row.label}:`, size: 'sm', color: '#64748B', flex: 2 },
+            { type: 'text', text: row.value || '-', size: 'sm', color: '#334155', flex: 5, wrap: true }
+          ]
+        })),
         {
           type: 'box',
           layout: 'vertical',
@@ -144,7 +162,7 @@ export async function notifyTechnicianGroup(notice: NewTicketNotice): Promise<vo
           action: {
             type: 'uri',
             label: '🖥️ จัดการงานในระบบ',
-            uri: 'https://sko-it-asset-inventory.vercel.app/dashboard/tickets'
+            uri: manageUrl
           }
         },
         ...(safeImageUrl ? [{
@@ -195,8 +213,9 @@ export async function notifyTechnicianGroup(notice: NewTicketNotice): Promise<vo
       (assetInfo ? `💻 อุปกรณ์: ${assetInfo}\n` : '') +
       `📝 รายละเอียด: ${description || '-'}\n` +
       `📅 เวลา: ${thaiDateStr}\n` +
+      extraRows.map((r) => `• ${r.label}: ${r.value}\n`).join('') +
       (safeImageUrl ? `📷 รูปภาพ: ${safeImageUrl}\n` : '') +
-      `\n🖥️ จัดการงาน: https://sko-it-asset-inventory.vercel.app/dashboard/tickets`;
+      `\n🖥️ จัดการงาน: ${manageUrl}`;
 
     const fallbackRes = await fetch('https://api.line.me/v2/bot/message/push', {
       method: 'POST',
