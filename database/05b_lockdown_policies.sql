@@ -4,6 +4,19 @@
 
 BEGIN;
 
+-- 1b. Make sure RLS is actually on (asset_categories was found readable without a policy)
+ALTER TABLE public.departments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.personnel ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.asset_categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.assets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.repair_tickets ENABLE ROW LEVEL SECURITY;
+
+-- The LIFF repair form reads these two lists directly; nothing sensitive in either.
+DROP POLICY IF EXISTS "Allow anonymous read on departments" ON public.departments;
+CREATE POLICY "Allow anonymous read on departments" ON public.departments FOR SELECT TO anon USING (true);
+DROP POLICY IF EXISTS "Allow anonymous read on asset_categories" ON public.asset_categories;
+CREATE POLICY "Allow anonymous read on asset_categories" ON public.asset_categories FOR SELECT TO anon USING (true);
+
 -- 2. Remove anonymous access that exposed or allowed editing of data -------
 DROP POLICY IF EXISTS "Allow anonymous insert on repair_tickets" ON public.repair_tickets;
 DROP POLICY IF EXISTS "Allow anonymous select own tickets" ON public.repair_tickets;
