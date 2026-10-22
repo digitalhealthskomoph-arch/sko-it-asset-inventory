@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, use } from 'react';
 import { supabase } from '@/lib/supabase';
+import { staffFetch } from '@/lib/api-client';
 import { 
   Camera, Save, Loader2, X, Trash2, ArrowLeft, Sparkles, 
   AlertTriangle, AlertCircle, CheckCircle2, Clock, Wrench, 
@@ -168,7 +169,7 @@ export default function EditAssetPage({ params }: { params: Promise<{ id: string
       const formData = new FormData();
       formData.append('image', file);
 
-      const response = await fetch('/api/analyze-image', {
+      const response = await staffFetch('/api/analyze-image', {
         method: 'POST',
         body: formData,
       });
@@ -235,7 +236,7 @@ export default function EditAssetPage({ params }: { params: Promise<{ id: string
         const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
         const filePath = `survey/${fileName}`; 
 
-        const res = await fetch('/api/upload', {
+        const res = await staffFetch('/api/upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

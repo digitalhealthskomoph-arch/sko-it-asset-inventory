@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# personal data (PDPA) - never commit
+*.xlsx
+*.xls
+*.csv
+*.local.sql

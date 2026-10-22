@@ -1,11 +1,13 @@
+import { createHmac, timingSafeEqual } from 'crypto';
 import { NextResponse } from 'next/server';
-import { supabaseAdmin as supabase } from '@/lib/supabase-admin';
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 const LINE_ACCESS_TOKEN =
   process.env.LINE_CHANNEL_ACCESS_TOKEN ||
   process.env.LINE_ACCESS_TOKEN ||
   process.env.CHANNEL_ACCESS_TOKEN ||
   '';
+const LINE_CHANNEL_SECRET = process.env.LINE_CHANNEL_SECRET || '';
 // Endpoint URL = https://sko-it-asset-inventory.vercel.app/liff
 // So LIFF sub-paths become: /liff.line.me/ID/repair → /liff/repair
 const LIFF_BASE = 'https://liff.line.me/2008591648-wGRKxePd';
@@ -13,9 +15,23 @@ const LIFF_REPAIR_URL   = `${LIFF_BASE}/repair`;
 const LIFF_STATUS_URL   = `${LIFF_BASE}/status`;
 const LIFF_EVALUATE_URL = `${LIFF_BASE}/evaluate`;
 
+/** Checks the x-line-signature header (HMAC-SHA256 of the raw body with the channel secret). */
+function isValidLineSignature(rawBody: string, signature: string | null): boolean {
+  if (!LINE_CHANNEL_SECRET || !signature) return false;
+  const expected = createHmac('sha256', LINE_CHANNEL_SECRET).update(rawBody).digest();
+  const received = Buffer.from(signature, 'base64');
+  return received.length === expected.length && timingSafeEqual(received, expected);
+}
+
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    const rawBody = await req.text();
+    if (!isValidLineSignature(rawBody, req.headers.get('x-line-signature'))) {
+      if (!LINE_CHANNEL_SECRET) console.error('LINE_CHANNEL_SECRET is not configured');
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+    }
+
+    const body = JSON.parse(rawBody);
     const events = body.events;
 
     if (!events || events.length === 0) {
@@ -97,32 +113,12 @@ async function sendMainMenu(replyToken: string) {
 }
 
 async function handleTrackStatus(replyToken: string, userId: string) {
-  let { data: tickets, error } = await supabase
+  const { data: tickets, error } = await getSupabaseAdmin()
     .from('repair_tickets')
     .select('id, ticket_number, description, status, technician_name, created_at, line_user_id')
     .eq('line_user_id', userId)
     .order('created_at', { ascending: false })
     .limit(5);
-
-  // Fallback: If no tickets matched line_user_id, find active tickets
-  if (!tickets || tickets.length === 0) {
-    const { data: activeTickets } = await supabase
-      .from('repair_tickets')
-      .select('id, ticket_number, description, status, technician_name, created_at, line_user_id')
-      .neq('status', 'ปิดงาน')
-      .order('created_at', { ascending: false })
-      .limit(5);
-
-    if (activeTickets && activeTickets.length > 0) {
-      tickets = activeTickets;
-      if (userId) {
-        await supabase
-          .from('repair_tickets')
-          .update({ line_user_id: userId })
-          .eq('id', activeTickets[0].id);
-      }
-    }
-  }
 
   if (error || !tickets || tickets.length === 0) {
     await replyToLine({
@@ -244,31 +240,11 @@ async function handleTrackStatus(replyToken: string, userId: string) {
 }
 
 async function handleCloseTicket(replyToken: string, userId: string) {
-  let { data: tickets, error } = await supabase
+  const { data: tickets, error } = await getSupabaseAdmin()
     .from('repair_tickets')
     .select('id, ticket_number, description, technician_name, line_user_id')
     .eq('line_user_id', userId)
     .eq('status', 'รอผู้ใช้ยืนยัน');
-
-  // Fallback: If no tickets matched line_user_id, find tickets with status 'รอผู้ใช้ยืนยัน'
-  if (!tickets || tickets.length === 0) {
-    const { data: pendingTickets } = await supabase
-      .from('repair_tickets')
-      .select('id, ticket_number, description, technician_name, line_user_id')
-      .eq('status', 'รอผู้ใช้ยืนยัน')
-      .order('updated_at', { ascending: false })
-      .limit(5);
-
-    if (pendingTickets && pendingTickets.length > 0) {
-      tickets = pendingTickets;
-      if (userId) {
-        await supabase
-          .from('repair_tickets')
-          .update({ line_user_id: userId })
-          .eq('id', pendingTickets[0].id);
-      }
-    }
-  }
 
   if (error || !tickets || tickets.length === 0) {
     await replyToLine({

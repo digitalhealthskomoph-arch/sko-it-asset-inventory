@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+import { staffFetch } from '@/lib/api-client';
 import { Search, Loader2, Plus, MonitorSmartphone, Camera, Save, X, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -62,7 +63,7 @@ export default function SurveyPage() {
       const formData = new FormData();
       formData.append('image', file);
 
-      const response = await fetch('/api/analyze-image', {
+      const response = await staffFetch('/api/analyze-image', {
         method: 'POST',
         body: formData,
       });
@@ -163,7 +164,7 @@ export default function SurveyPage() {
         const filePath = `survey/${fileName}`; // Put in 'survey' folder
 
         // ขอ Presigned URL จาก API ของเรา
-        const res = await fetch('/api/upload', {
+        const res = await staffFetch('/api/upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

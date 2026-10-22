@@ -27,9 +27,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         router.push('/');
-      } else {
-        setLoading(false);
+        return;
       }
+      // Only accounts in staff_users may use the dashboard (RLS enforces the same on the data).
+      const { data: staff } = await supabase
+        .from('staff_users')
+        .select('user_id')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+      if (!staff) {
+        await supabase.auth.signOut();
+        alert('บัญชีนี้ไม่มีสิทธิ์เข้าใช้งานระบบ');
+        router.push('/');
+        return;
+      }
+      setLoading(false);
     };
     checkUser();
   }, [router]);

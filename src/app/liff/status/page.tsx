@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabase';
 import { Loader2, Search, ArrowLeft, Clock, CheckCircle, Wrench, RefreshCw } from 'lucide-react';
 import liff from '@line/liff';
+import { LIFF_ID, liffFetch } from '@/lib/api-client';
 
 export default function StatusTrackingPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -23,7 +23,7 @@ export default function StatusTrackingPage() {
       // Initialize LIFF to get user ID if not in session
       if (!uid) {
         try {
-          await liff.init({ liffId: '2008591648-wGRKxePd' });
+          await liff.init({ liffId: LIFF_ID });
           if (liff.isLoggedIn()) {
             const profile = await liff.getProfile();
             uid = profile.userId;
@@ -51,20 +51,12 @@ export default function StatusTrackingPage() {
 
       let dataList: any[] = [];
 
-      // 1. Fetch by line_user_id if available
+      // 1. Tickets of the verified LINE user (the server checks the LIFF access token)
       if (uid) {
-        const { data: uidData } = await supabase
-          .from('repair_tickets')
-          .select(`
-            *,
-            personnel (first_name, last_name),
-            assets (asset_number, brand_model)
-          `)
-          .eq('line_user_id', uid)
-          .order('created_at', { ascending: false })
-          .limit(10);
+        const res = await liffFetch('/api/liff/tickets');
+        const uidData: any[] = res.ok ? (await res.json()).tickets : [];
 
-        if (uidData && uidData.length > 0) {
+        if (uidData.length > 0) {
           dataList = [...uidData];
           try {
             const saved: string[] = JSON.parse(localStorage.getItem('my_ticket_numbers') || '[]');
@@ -81,23 +73,13 @@ export default function StatusTrackingPage() {
       // 2. Fetch by saved ticket numbers from local device (merging results)
       if (savedTicketNums.length > 0) {
         const existingIds = new Set(dataList.map(t => t.id));
-        const { data: savedData } = await supabase
-          .from('repair_tickets')
-          .select(`
-            *,
-            personnel (first_name, last_name),
-            assets (asset_number, brand_model)
-          `)
-          .in('ticket_number', savedTicketNums)
-          .order('created_at', { ascending: false })
-          .limit(10);
+        const res = await fetch(`/api/liff/tickets?numbers=${encodeURIComponent(savedTicketNums.join(','))}`);
+        const savedData: any[] = res.ok ? (await res.json()).tickets : [];
 
-        if (savedData) {
-          for (const item of savedData) {
-            if (!existingIds.has(item.id)) {
-              dataList.push(item);
-              existingIds.add(item.id);
-            }
+        for (const item of savedData) {
+          if (!existingIds.has(item.id)) {
+            dataList.push(item);
+            existingIds.add(item.id);
           }
         }
       }
@@ -120,21 +102,9 @@ export default function StatusTrackingPage() {
     setSearchResults(null);
 
     try {
-      const cleanNum = query.replace(/^IT-/i, '').trim();
-
-      // Search by ticket_number ilike (e.g. 697552, 7552, IT-697552) or symptom description
-      const { data, error } = await supabase
-        .from('repair_tickets')
-        .select(`
-          *,
-          personnel (first_name, last_name),
-          assets (asset_number, brand_model)
-        `)
-        .or(`ticket_number.ilike.%${query}%,ticket_number.ilike.%${cleanNum}%,description.ilike.%${query}%`)
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      const results = data || [];
+      // Exact ticket number only (e.g. IT-697552 or 697552), so strangers cannot browse other people's tickets
+      const res = await fetch(`/api/liff/tickets?numbers=${encodeURIComponent(query)}`);
+      const results: any[] = res.ok ? (await res.json()).tickets : [];
 
       // Save found ticket numbers to local device storage
       if (results.length > 0) {
@@ -255,7 +225,7 @@ export default function StatusTrackingPage() {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="ค้นหาด้วยรหัส (เช่น 697552) หรืออาการ"
+              placeholder="กรอกรหัสใบแจ้งซ่อมให้ครบ (เช่น IT-697552)"
               className="flex-1 p-3 bg-white border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm"
             />
             <button
@@ -291,7 +261,7 @@ export default function StatusTrackingPage() {
               <div className="text-center p-8 bg-white rounded-2xl border border-slate-200 text-slate-500 shadow-sm">
                 <Search className="w-10 h-10 text-slate-300 mx-auto mb-2" />
                 <p className="text-sm font-medium text-slate-700">ไม่พบข้อมูลงานซ่อมที่ตรงกับ "{searchTerm}"</p>
-                <p className="text-xs text-slate-400 mt-1">ลองพิมพ์เฉพาะตัวเลขรหัส หรือข้อความอาการเสีย</p>
+                <p className="text-xs text-slate-400 mt-1">กรุณากรอกรหัสใบแจ้งซ่อมให้ครบทุกหลัก</p>
               </div>
             )}
           </div>

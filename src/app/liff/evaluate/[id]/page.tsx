@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import liff from '@line/liff';
+import { liffFetch } from '@/lib/api-client';
 import { Loader2, Star, CheckCircle, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
-import liff from '@line/liff';
 
 export default function EvaluatePage() {
   const params = useParams();
@@ -22,17 +22,12 @@ export default function EvaluatePage() {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    // Initialize LIFF just so we know we are in LINE context (optional here)
-    liff.init({ liffId: process.env.NEXT_PUBLIC_LIFF_ID || '' }).catch(console.error);
     fetchTicket();
   }, [id]);
 
   const fetchTicket = async () => {
-    const { data } = await supabase
-      .from('repair_tickets')
-      .select('*, personnel(first_name, last_name)')
-      .eq('id', id)
-      .single();
+    const res = await fetch(`/api/liff/tickets?id=${encodeURIComponent(id)}`);
+    const data = res.ok ? (await res.json()).ticket : null;
     
     if (data) {
       setTicket(data);
@@ -46,7 +41,7 @@ export default function EvaluatePage() {
     
     setSubmitting(true);
     try {
-      const res = await fetch('/api/tickets/evaluate', {
+      const res = await liffFetch('/api/tickets/evaluate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

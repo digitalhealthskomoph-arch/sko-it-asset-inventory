@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+import { staffFetch } from '@/lib/api-client';
 import {
   Search,
   Loader2,
@@ -449,7 +450,7 @@ export default function AssetListPage() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const res = await fetch('/api/procurement-sync', {
+      const res = await staffFetch('/api/procurement-sync', {
         method: 'POST',
         body: formData,
       });

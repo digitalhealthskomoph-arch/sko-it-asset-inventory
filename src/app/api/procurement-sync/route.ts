@@ -1,15 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as XLSX from 'xlsx';
-import { supabaseAdmin } from '@/lib/supabase-admin';
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { errorResponse, requireStaff } from '@/lib/api-auth';
 import { runProcurementSync } from '@/lib/procurement-sync';
 
 export async function POST(req: NextRequest) {
   try {
+    await requireStaff(req);
+
     const formData = await req.formData();
     const file = formData.get('file') as File | null;
 
     if (!file) {
       return NextResponse.json({ error: 'ไม่พบไฟล์ Excel ที่อัปโหลด' }, { status: 400 });
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      return NextResponse.json({ error: 'ไฟล์ใหญ่เกินไป (จำกัด 10MB)' }, { status: 400 });
     }
 
     const arrayBuffer = await file.arrayBuffer();
@@ -26,17 +33,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'ไฟล์ Excel ไม่มีข้อมูล' }, { status: 400 });
     }
 
-    const summary = await runProcurementSync(excelRows, supabaseAdmin);
+    const summary = await runProcurementSync(excelRows, getSupabaseAdmin());
 
     return NextResponse.json({
       success: true,
       summary,
     });
-  } catch (error: any) {
-    console.error('Procurement sync error:', error);
-    return NextResponse.json(
-      { error: error?.message || 'เกิดข้อผิดพลาดในการซิงค์ข้อมูลพัสดุ' },
-      { status: 500 }
-    );
+  } catch (error) {
+    return errorResponse(error, 'เกิดข้อผิดพลาดในการซิงค์ข้อมูลพัสดุ');
   }
 }

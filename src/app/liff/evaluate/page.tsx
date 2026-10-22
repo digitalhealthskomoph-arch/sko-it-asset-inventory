@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { liffFetch } from '@/lib/api-client';
 import { Loader2, Star, CheckCircle, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import liff from '@line/liff';
@@ -44,11 +44,8 @@ function EvaluateContent() {
   }, [ticketId, isPreview]);
 
   const fetchTicket = async (id: string) => {
-    const { data } = await supabase
-      .from('repair_tickets')
-      .select('*, personnel(first_name, last_name)')
-      .eq('id', id)
-      .single();
+    const res = await fetch(`/api/liff/tickets?id=${encodeURIComponent(id)}`);
+    const data = res.ok ? (await res.json()).ticket : null;
     if (data) {
       setTicket(data);
       if (data.rating) setRating(data.rating);
@@ -67,7 +64,7 @@ function EvaluateContent() {
 
     setSubmitting(true);
     try {
-      const res = await fetch('/api/tickets/evaluate', {
+      const res = await liffFetch('/api/tickets/evaluate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -1,14 +1,6 @@
 import { NextResponse } from 'next/server';
-import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
-
-const s3Client = new S3Client({
-  region: 'auto',
-  endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-  credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
-  },
-});
+import { GetObjectCommand } from '@aws-sdk/client-s3';
+import { getR2Client, r2Bucket } from '@/lib/r2';
 
 export async function GET(
   request: Request,
@@ -23,11 +15,11 @@ export async function GET(
     }
 
     const command = new GetObjectCommand({
-      Bucket: process.env.R2_BUCKET || 'my-app-assets',
+      Bucket: r2Bucket(),
       Key: objectKey,
     });
 
-    const response = await s3Client.send(command);
+    const response = await getR2Client().send(command);
 
     if (!response.Body) {
       return NextResponse.json({ error: 'Image not found' }, { status: 404 });
